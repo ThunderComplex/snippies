@@ -12,13 +12,18 @@ struct Snippie {
 
 #[derive(Clone, Debug, Parser)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(short, long, help = "Directory where snippie .md files reside")]
     snippie_dir: String,
 
-    #[arg(short, long)]
+    #[arg(short, long, help = "Output directory, ready to serve")]
     out_dir: Option<String>,
 
-    #[arg(short, long, default_value_t = false)]
+    #[arg(
+        short,
+        long,
+        default_value_t = false,
+        help = "Delete output directory contents before writing new files"
+    )]
     clear_output_dir: bool,
 }
 
