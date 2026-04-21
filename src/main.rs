@@ -1,5 +1,8 @@
 use clap::Parser;
-use std::{io::Error, path::Path};
+use std::{
+    io::Error,
+    path::{Path, PathBuf},
+};
 
 #[derive(Clone, Debug)]
 struct Snippie {
@@ -19,16 +22,22 @@ struct Args {
     clear_output_dir: bool,
 }
 
+impl Args {
+    fn get_out_dir_or_default(&self) -> PathBuf {
+        let output_dir = self.out_dir.clone().unwrap_or(String::from("./output"));
+        PathBuf::from(output_dir)
+    }
+}
+
 fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Result<(), Error> {
-    let output_dir = args.out_dir.clone().unwrap_or(String::from("./output"));
-    let output_dir = Path::new(&output_dir);
+    let output_dir = args.get_out_dir_or_default();
 
     if !output_dir.exists() {
-        std::fs::create_dir_all(output_dir)?;
+        std::fs::create_dir_all(&output_dir)?;
     } else if args.clear_output_dir {
         println!("[INFO] Clearing existing output directory");
-        std::fs::remove_dir_all(output_dir)?;
-        std::fs::create_dir_all(output_dir)?;
+        std::fs::remove_dir_all(&output_dir)?;
+        std::fs::create_dir_all(&output_dir)?;
     }
 
     let index_path = output_dir.join("index.html");
@@ -45,8 +54,7 @@ fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Resul
 }
 
 fn write_assets(args: &Args) -> Result<(), Error> {
-    let output_dir = args.out_dir.clone().unwrap_or(String::from("./output"));
-    let output_dir = Path::new(&output_dir);
+    let output_dir = args.get_out_dir_or_default();
     let prism_css = include_str!("prism.css");
     let prism_js = include_str!("prism.js");
 
@@ -60,32 +68,30 @@ fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, Error> {
     let files = std::fs::read_dir(path)?;
     let mut snippies = vec![];
 
-    for file in files {
-        if let Ok(file_entry) = file {
-            let file_path = file_entry.path();
+    for file in files.flatten() {
+        let file_path = file.path();
 
-            if file_path.is_dir() {
-                continue;
-            }
+        if file_path.is_dir() {
+            continue;
+        }
 
-            let file_name = file_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .map(|s| s.to_string());
+        let file_name = file_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_string());
 
-            if let Some(title) = file_name {
-                let snippie_file_contents = std::fs::read_to_string(file_path)?;
-                let snippie_rendered = markdown::to_html(&snippie_file_contents);
-                let snippie_template = include_str!("template.html");
-                let snippie_content = snippie_template
-                    .replace(r"{{$_TITLE}}", &title)
-                    .replace(r"{{$_CONTENT}}", &snippie_rendered);
+        if let Some(title) = file_name {
+            let snippie_file_contents = std::fs::read_to_string(file_path)?;
+            let snippie_rendered = markdown::to_html(&snippie_file_contents);
+            let snippie_template = include_str!("template.html");
+            let snippie_content = snippie_template
+                .replace(r"{{$_TITLE}}", &title)
+                .replace(r"{{$_CONTENT}}", &snippie_rendered);
 
-                snippies.push(Snippie {
-                    title,
-                    contents: snippie_content,
-                });
-            }
+            snippies.push(Snippie {
+                title,
+                contents: snippie_content,
+            });
         }
     }
 
