@@ -4,6 +4,14 @@
 		{
 			"type": "cargo",
 			"command": "run",
+			"args": [
+				"--",
+				"--snippie-dir",
+				"snippies",
+				"-c",
+				"-o",
+				"output"
+			],
 			"problemMatcher": [
 				"$rustc"
 			],

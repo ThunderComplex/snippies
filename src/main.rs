@@ -1,3 +1,4 @@
+use clap::Parser;
 use std::{io::Error, path::Path};
 
 #[derive(Clone, Debug)]
@@ -6,10 +7,27 @@ struct Snippie {
     contents: String,
 }
 
-fn write_html_files(index: String, snippies: Vec<Snippie>) -> Result<(), Error> {
-    let output_dir = Path::new("./output");
+#[derive(Clone, Debug, Parser)]
+struct Args {
+    #[arg(short, long)]
+    snippie_dir: String,
+
+    #[arg(short, long)]
+    out_dir: Option<String>,
+
+    #[arg(short, long, default_value_t = false)]
+    clear_output_dir: bool,
+}
+
+fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Result<(), Error> {
+    let output_dir = args.out_dir.clone().unwrap_or(String::from("./output"));
+    let output_dir = Path::new(&output_dir);
 
     if !output_dir.exists() {
+        std::fs::create_dir_all(output_dir)?;
+    } else if args.clear_output_dir {
+        println!("[INFO] Clearing existing output directory");
+        std::fs::remove_dir_all(output_dir)?;
         std::fs::create_dir_all(output_dir)?;
     }
 
@@ -26,8 +44,9 @@ fn write_html_files(index: String, snippies: Vec<Snippie>) -> Result<(), Error> 
     Ok(())
 }
 
-fn write_assets() -> Result<(), Error> {
-    let output_dir = Path::new("./output");
+fn write_assets(args: &Args) -> Result<(), Error> {
+    let output_dir = args.out_dir.clone().unwrap_or(String::from("./output"));
+    let output_dir = Path::new(&output_dir);
     let prism_css = include_str!("prism.css");
     let prism_js = include_str!("prism.js");
 
@@ -74,9 +93,10 @@ fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, Error> {
 }
 
 fn main() -> Result<(), Error> {
+    let args = Args::parse();
     let index = include_str!("index.html");
 
-    let snippies = render_snippies_in_path(Path::new("./snippies"))?;
+    let snippies = render_snippies_in_path(Path::new(&args.snippie_dir))?;
 
     let snippie_links = snippies
         .iter()
@@ -86,8 +106,8 @@ fn main() -> Result<(), Error> {
 
     let snippie_index = index.replace(r"{{$_CONTENT}}", &snippie_links);
 
-    let _ = write_html_files(snippie_index, snippies);
-    let _ = write_assets();
+    let _ = write_html_files(snippie_index, snippies, &args);
+    let _ = write_assets(&args);
 
     Ok(())
 }
