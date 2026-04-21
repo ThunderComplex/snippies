@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Snippies</title>
+
+    <link rel="stylesheet" href="/prism.css" />
+
+    <style>
+        body {
+            background-color: #1f2c35;
+            color: #dfc4ca;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .snippie-container {
+            width: 50%;
+            background-color: #1e2430;
+            height: 80vh;
+            left: 25%;
+            position: absolute;
+            overflow: scroll;
+        }
+
+        .snippie-list {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .snippie-list li {
+            background-color: #17202b;
+            margin: 20px 10px 20px 10px;
+            padding: 20px;
+            box-shadow: #232e3b 0px 0px 8px 3px;
+        }
+
+        .snippie-list li a {
+            text-decoration: none;
+            color: #dfc4ca;
+
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/prism.js" async></script>
+
+    <h1>Snippies</h1>
+
+    <div class="snippie-container">
+        <ul class="snippie-list">
+            {{$_CONTENT}}
+        </ul>
+    </div>
+</body>
+
+</html>

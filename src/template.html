@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Snippie - {{$_TITLE}}</title>
+
+    <link rel="stylesheet" href="/prism.css" />
+
+    <style>
+        body {
+            background-color: #1f2c35;
+            color: #dfc4ca;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #backlink {
+            color: #ffeeff;
+            font-size: 8pt;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/prism.js" async></script>
+
+    <a id="backlink" href="/">back</a>
+    {{$_CONTENT}}
+</body>
+
+</html>
