@@ -10,7 +10,8 @@
 				"snippies",
 				"-c",
 				"-o",
-				"output"
+				"output",
+				"--dev"
 			],
 			"problemMatcher": [
 				"$rustc"

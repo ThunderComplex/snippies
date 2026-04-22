@@ -17,9 +17,17 @@ Under the hood snippies uses prism.js for syntax highlighting.
 snippies [OPTIONS] --snippie-dir <SNIPPIE_DIR>
 
 Options:
-  -s, --snippie-dir <SNIPPIE_DIR>  Directory where snippie .md files reside
-  -o, --out-dir <OUT_DIR>          Output directory, ready to serve
-  -c, --clear-output-dir           Delete output directory contents before writing new files
-  -h, --help                       Print help
+  -s, --snippie <SNIPPIE>  Directory where snippie .md files reside
+  -o, --out <OUT>          Output directory, ready to serve
+  -c, --clear-output       Delete output directory contents before writing new files
+  -p <PORT>                Port to listen on [default: 8192]
+      --watch              Watch for file changes (not needed when 'dev' is enabled)
+      --dev                Start a dev server and watch for file changes
+  -h, --help               Print help
 ```
 
+## Development notice  
+
+This project is a heavy work-in-progress and still in early stages of development.  
+This document might not reflect all of the current capabilities of this project.  
+When in doubt, just read the source code.
