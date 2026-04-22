@@ -1,9 +1,16 @@
+use axum::Router;
 use clap::Parser;
+use notify::{Config, EventKind, RecommendedWatcher, Watcher};
 use std::{
+    error::Error,
     fmt::Write,
-    io::Error,
+    io::Error as IOErrror,
     path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
 };
+use tokio::net::TcpListener;
+use tower_http::services::ServeDir;
+use tracing::{info, warn};
 
 #[derive(Clone, Debug)]
 struct Snippie {
@@ -26,6 +33,9 @@ struct Args {
         help = "Delete output directory contents before writing new files"
     )]
     clear_output: bool,
+
+    #[arg(short, default_value_t = 8192, help = "Port to listen on")]
+    port: u16,
 }
 
 impl Args {
@@ -35,13 +45,13 @@ impl Args {
     }
 }
 
-fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Result<(), Error> {
+fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Result<(), IOErrror> {
     let output_dir = args.get_out_dir_or_default();
 
     if !output_dir.exists() {
         std::fs::create_dir_all(&output_dir)?;
     } else if args.clear_output {
-        println!("[INFO] Clearing existing output directory");
+        info!("Clearing existing output directory");
         std::fs::remove_dir_all(&output_dir)?;
         std::fs::create_dir_all(&output_dir)?;
     }
@@ -59,7 +69,7 @@ fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Resul
     Ok(())
 }
 
-fn write_assets(args: &Args) -> Result<(), Error> {
+fn write_assets(args: &Args) -> Result<(), IOErrror> {
     let output_dir = args.get_out_dir_or_default();
     let prism_css = include_str!("prism.css");
     let prism_js = include_str!("prism.js");
@@ -70,7 +80,7 @@ fn write_assets(args: &Args) -> Result<(), Error> {
     Ok(())
 }
 
-fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, Error> {
+fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, IOErrror> {
     let files = std::fs::read_dir(path)?;
     let mut snippies = vec![];
 
@@ -82,7 +92,7 @@ fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, Error> {
         }
 
         let file_name = file_path
-            .file_name()
+            .file_stem()
             .and_then(|s| s.to_str())
             .map(std::string::ToString::to_string);
 
@@ -104,8 +114,9 @@ fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, Error> {
     Ok(snippies)
 }
 
-fn main() -> Result<(), Error> {
-    let args = Args::parse();
+fn create_snippies(args: &Args) -> Result<(), IOErrror> {
+    info!("Creating snippies");
+
     let index = include_str!("index.html");
 
     let snippies = render_snippies_in_path(Path::new(&args.snippie))?;
@@ -119,6 +130,76 @@ fn main() -> Result<(), Error> {
 
     let _ = write_html_files(snippie_index, snippies, &args);
     let _ = write_assets(&args);
+
+    info!("Snippies created successfully");
+    Ok(())
+}
+
+fn get_current_timestamp() -> u64 {
+    let current_time = SystemTime::now();
+    current_time
+        .duration_since(UNIX_EPOCH)
+        .expect("Weird time error")
+        .as_secs()
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    tracing_subscriber::fmt::init();
+    let args = Args::parse();
+    let file_watch_args = args.clone();
+    let output_dir = args.get_out_dir_or_default();
+
+    create_snippies(&args)?;
+
+    let (file_watch_tx, mut file_watch_rx) = tokio::sync::watch::channel(get_current_timestamp());
+
+    tokio::spawn(async move {
+        loop {
+            let updated = file_watch_rx.changed().await;
+
+            match updated {
+                Ok(()) => {
+                    let update_time = *file_watch_rx.borrow_and_update();
+
+                    if update_time == 0 {
+                        break;
+                    }
+
+                    if let Err(error) = create_snippies(&file_watch_args) {
+                        warn!("Could not create snippies. Error: {}", error);
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+
+        info!("File watch build thread finished");
+    });
+
+    let mut file_watcher = RecommendedWatcher::new(
+        move |e: Result<notify::Event, notify::Error>| match e {
+            Ok(e) => match e.kind {
+                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                    file_watch_tx.send(get_current_timestamp()).unwrap();
+                }
+                _ => info!("Ignored event of kind {:?}", e.kind),
+            },
+            Err(_) => file_watch_tx.send(0).unwrap(),
+        },
+        Config::default(),
+    )?;
+
+    file_watcher.watch(
+        Path::new(&args.snippie),
+        notify::RecursiveMode::NonRecursive,
+    )?;
+
+    let app = Router::new().fallback_service(ServeDir::new(&output_dir));
+
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
+    info!("Listening on {}", args.port);
+    axum::serve(listener, app).await?;
 
     Ok(())
 }
