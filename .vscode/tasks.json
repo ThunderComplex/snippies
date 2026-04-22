@@ -6,7 +6,7 @@
 			"command": "run",
 			"args": [
 				"--",
-				"--snippie-dir",
+				"--snippie",
 				"snippies",
 				"-c",
 				"-o",
