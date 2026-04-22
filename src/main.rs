@@ -1,5 +1,6 @@
 use clap::Parser;
 use std::{
+    fmt::Write,
     io::Error,
     path::{Path, PathBuf},
 };
@@ -13,10 +14,10 @@ struct Snippie {
 #[derive(Clone, Debug, Parser)]
 struct Args {
     #[arg(short, long, help = "Directory where snippie .md files reside")]
-    snippie_dir: String,
+    snippie: String,
 
     #[arg(short, long, help = "Output directory, ready to serve")]
-    out_dir: Option<String>,
+    out: Option<String>,
 
     #[arg(
         short,
@@ -24,12 +25,12 @@ struct Args {
         default_value_t = false,
         help = "Delete output directory contents before writing new files"
     )]
-    clear_output_dir: bool,
+    clear_output: bool,
 }
 
 impl Args {
     fn get_out_dir_or_default(&self) -> PathBuf {
-        let output_dir = self.out_dir.clone().unwrap_or(String::from("./output"));
+        let output_dir = self.out.clone().unwrap_or(String::from("./output"));
         PathBuf::from(output_dir)
     }
 }
@@ -39,7 +40,7 @@ fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Resul
 
     if !output_dir.exists() {
         std::fs::create_dir_all(&output_dir)?;
-    } else if args.clear_output_dir {
+    } else if args.clear_output {
         println!("[INFO] Clearing existing output directory");
         std::fs::remove_dir_all(&output_dir)?;
         std::fs::create_dir_all(&output_dir)?;
@@ -83,7 +84,7 @@ fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, Error> {
         let file_name = file_path
             .file_name()
             .and_then(|s| s.to_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
         if let Some(title) = file_name {
             let snippie_file_contents = std::fs::read_to_string(file_path)?;
@@ -107,13 +108,12 @@ fn main() -> Result<(), Error> {
     let args = Args::parse();
     let index = include_str!("index.html");
 
-    let snippies = render_snippies_in_path(Path::new(&args.snippie_dir))?;
+    let snippies = render_snippies_in_path(Path::new(&args.snippie))?;
 
-    let snippie_links = snippies
-        .iter()
-        .map(|s| format!("<li><a href='{}.html'>{}</a></li>", s.title, s.title))
-        .collect::<Vec<String>>()
-        .join("");
+    let snippie_links = snippies.iter().fold(String::new(), |mut acc, s| {
+        let _ = write!(acc, "<li><a href='{}.html'>{}</a></li>", s.title, s.title);
+        acc
+    });
 
     let snippie_index = index.replace(r"{{$_CONTENT}}", &snippie_links);
 
