@@ -7,7 +7,7 @@ use std::{
     fmt::Write,
     io::Error as IOErrror,
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};
@@ -251,6 +251,9 @@ async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>)
         warn!("Could not create Snippie. Reason: {}", error);
         return Redirect::to("/error");
     }
+
+    // Wait for snippies to be rebuilt, so we don't accidentally run into a 404 error
+    tokio::time::sleep(Duration::from_millis(100)).await;
 
     Redirect::to("/")
 }
