@@ -247,7 +247,6 @@ async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>)
     snippie_file_path.push(&data.title);
     snippie_file_path.add_extension("md");
 
-    // TODO: Should probably improve this in the future and make the error visible on the frontend
     if let Err(error) = std::fs::write(snippie_file_path, data.contents) {
         warn!("Could not create Snippie. Reason: {}", error);
         return Redirect::to("/error");
