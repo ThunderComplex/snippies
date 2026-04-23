@@ -22,7 +22,7 @@ Options:
   -c, --clear-output       Delete output directory contents before writing new files
   -p <PORT>                Port to listen on [default: 8192]
       --watch              Watch for file changes (not needed when 'dev' is enabled)
-      --dev                Start a dev server and watch for file changes
+      --serve              Start a server and watch for file changes
   -h, --help               Print help
 ```
 

@@ -1,6 +1,7 @@
-use axum::Router;
+use axum::{Form, Router, extract::State, response::Redirect, routing::post};
 use clap::Parser;
 use notify::{Config, EventKind, RecommendedWatcher, Watcher};
+use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     fmt::Write,
@@ -12,7 +13,7 @@ use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
 use tracing::{info, warn};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Snippie {
     title: String,
     contents: String,
@@ -47,9 +48,9 @@ struct Args {
     #[arg(
         long,
         default_value_t = false,
-        help = "Start a dev server and watch for file changes"
+        help = "Start a server and watch for file changes"
     )]
-    dev: bool,
+    serve: bool,
 }
 
 impl Args {
@@ -166,7 +167,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     create_snippies(&args)?;
 
-    if args.dev || args.watch {
+    if args.serve || args.watch {
         let (file_watch_tx, mut file_watch_rx) =
             tokio::sync::watch::channel(get_current_timestamp());
 
@@ -215,8 +216,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             notify::RecursiveMode::NonRecursive,
         )?;
 
-        if args.dev {
-            let app = Router::new().fallback_service(ServeDir::new(&output_dir));
+        if args.serve {
+            let app = Router::new()
+                .route("/new", post(new_snippie_route))
+                .fallback_service(ServeDir::new(&output_dir))
+                .with_state(args.clone());
 
             let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
             info!("Dev mode enabled. Listening on {}", args.port);
@@ -228,4 +232,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+#[axum::debug_handler]
+async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>) -> Redirect {
+    info!("Creating new snippie: {:?}", &data.title);
+
+    let mut snippie_file_path = PathBuf::from(state.snippie);
+    snippie_file_path.push(&data.title);
+    snippie_file_path.add_extension("md");
+
+    // TODO: Should probably improve this in the future and make the error visible on the frontend
+    if let Err(error) = std::fs::write(snippie_file_path, data.contents) {
+        warn!("Could not create Snippie. Reason: {}", error);
+    };
+
+    Redirect::to("/")
 }

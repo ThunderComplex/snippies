@@ -1,5 +1,8 @@
 /target
 /output
+/snippies
+!/snippies/iterate-range.md
+!/snippies/markdown-test.md
 
 logs
 *.log

@@ -19,7 +19,7 @@
             background-color: #1e2430;
             height: 80vh;
             left: 25%;
-            position: absolute;
+            position: relative;
             overflow: scroll;
         }
 
@@ -39,7 +39,47 @@
         .snippie-list li a {
             text-decoration: none;
             color: #dfc4ca;
+        }
 
+        .new-snippie-container {
+            background-color: #1e2430;
+            color: #dfc4ca;
+            position: relative;
+            left: 25%;
+            margin-top: 40px;
+            width: 50%;
+        }
+
+        form>label {
+            display: block;
+            margin: 10px 10%;
+        }
+
+        form>input {
+            width: 80%;
+            margin-bottom: 20px;
+            margin-left: 10%;
+            background-color: #1f2c35;
+            color: #dfc4ca;
+        }
+
+        form>textarea {
+            width: 80%;
+            margin-bottom: 20px;
+            margin-left: 10%;
+            color: #dfc4ca;
+            background-color: #1f2c35;
+        }
+
+        form>button {
+            display: block;
+            background-color: #10A010;
+            color: black;
+            border-radius: 6px;
+            border: none;
+            padding: 10px;
+            position: relative;
+            left: 10%;
         }
     </style>
 </head>
@@ -51,6 +91,19 @@
         <ul class="snippie-list">
             {{$_CONTENT}}
         </ul>
+    </div>
+
+    <div class="new-snippie-container">
+        <h1>Create new snippie</h1>
+        <form action="/new" method="POST">
+            <label for="title">Title</label>
+            <input type="text" name="title" required />
+
+            <label for="contents">Contents</label>
+            <textarea name="contents" rows="4" autocomplete="off" required wrap="soft"></textarea>
+
+            <button type="submit">Save</button>
+        </form>
     </div>
 </body>
 
