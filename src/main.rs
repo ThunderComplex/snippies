@@ -145,8 +145,8 @@ fn create_snippies(args: &Args) -> Result<(), IOErrror> {
 
     let snippie_index = index.replace(r"{{$_CONTENT}}", &snippie_links);
 
-    let _ = write_html_files(snippie_index, snippies, &args);
-    let _ = write_assets(&args);
+    let _ = write_html_files(snippie_index, snippies, args);
+    let _ = write_assets(args);
 
     info!("Snippies created successfully");
     Ok(())
@@ -251,7 +251,7 @@ async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>)
     if let Err(error) = std::fs::write(snippie_file_path, data.contents) {
         warn!("Could not create Snippie. Reason: {}", error);
         return Redirect::to("/error");
-    };
+    }
 
     Redirect::to("/")
 }
