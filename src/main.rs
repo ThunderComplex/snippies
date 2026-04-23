@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     fmt::Write,
-    io::Error as IOErrror,
+    fs::OpenOptions,
+    io::{Error as IOErrror, Write as IOWrite},
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -247,13 +248,29 @@ async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>)
     snippie_file_path.push(&data.title);
     snippie_file_path.add_extension("md");
 
-    if let Err(error) = std::fs::write(snippie_file_path, data.contents) {
-        warn!("Could not create Snippie. Reason: {}", error);
-        return Redirect::to("/error");
+    let new_snippie = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(snippie_file_path);
+
+    match new_snippie {
+        Ok(mut file) => {
+            if let Err(write_error) = file.write_all(data.contents.as_bytes()) {
+                warn!(
+                    "Could not write to new Snippie file. Reason: {}",
+                    write_error
+                );
+                Redirect::to("/error")
+            } else {
+                // Wait for snippies to be rebuilt, so we don't accidentally run into a 404 error
+                tokio::time::sleep(Duration::from_millis(100)).await;
+
+                Redirect::to("/")
+            }
+        }
+        Err(error) => {
+            warn!("Could not create Snippie. Reason: {}", error);
+            Redirect::to("/error")
+        }
     }
-
-    // Wait for snippies to be rebuilt, so we don't accidentally run into a 404 error
-    tokio::time::sleep(Duration::from_millis(100)).await;
-
-    Redirect::to("/")
 }
