@@ -1,4 +1,12 @@
-use axum::{Form, Router, extract::State, response::Redirect, routing::post};
+use axum::{
+    Form, Router,
+    body::Body,
+    extract::{Request, State},
+    http::{Response, header},
+    middleware::{self, Next},
+    response::{IntoResponse, Redirect},
+    routing::post,
+};
 use clap::Parser;
 use notify::{Config, EventKind, RecommendedWatcher, Watcher};
 use serde::{Deserialize, Serialize};
@@ -220,6 +228,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let app = Router::new()
                 .route("/new", post(new_snippie_route))
                 .fallback_service(ServeDir::new(&output_dir))
+                .layer(middleware::from_fn(display_error_middleware))
                 .with_state(args.clone());
 
             let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
@@ -234,18 +243,53 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+async fn display_error_middleware(request: Request, next: Next) -> impl IntoResponse {
+    dbg!(&request);
+    let next_resp = next.run(request).await;
+    let (mut parts, body) = next_resp.into_parts();
+
+    if let Some(error_header) = parts.headers.get("SNIPPIE_ERROR") {
+        info!("Displaying snippie error");
+        let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap();
+        let contents: Vec<u8> = dbg!(bytes).into_iter().collect();
+        let contents_str = String::from_utf8(dbg!(contents)).unwrap();
+
+        let replaced = contents_str.replace(
+            r"{{$_ERROR}}",
+            error_header
+                .to_str()
+                .unwrap_or("Snippie error but could not decode header"),
+        );
+
+        parts.headers.remove(header::CONTENT_LENGTH);
+        parts
+            .headers
+            .insert(header::CONTENT_LENGTH, replaced.len().into());
+
+        return Response::from_parts(parts, Body::from(replaced));
+    }
+
+    Response::from_parts(parts, body)
+}
+
 #[axum::debug_handler]
-async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>) -> Redirect {
+async fn new_snippie_route(
+    State(state): State<Args>,
+    Form(data): Form<Snippie>,
+) -> impl IntoResponse {
     info!("Creating new snippie: {:?}", &data.title);
 
     let mut snippie_file_path = PathBuf::from(state.snippie);
     snippie_file_path.push(&data.title);
     snippie_file_path.add_extension("md");
 
+    let mut error_header = [("SNIPPIE_ERROR", "DEEZ NUTZ".into())];
+
     // TODO: Should probably improve this in the future and make the error visible on the frontend
     if let Err(error) = std::fs::write(snippie_file_path, data.contents) {
         warn!("Could not create Snippie. Reason: {}", error);
+        error_header = [("SNIPPIE_ERROR", error.to_string())];
     };
 
-    Redirect::to("/")
+    (error_header, Redirect::to("/"))
 }
