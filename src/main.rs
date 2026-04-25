@@ -61,17 +61,6 @@ impl Args {
     }
 }
 
-// fn write_assets(args: &Args) -> Result<(), IOErrror> {
-//     let output_dir = args.get_out_dir_or_default();
-//     let prism_css = include_str!("prism.css");
-//     let prism_js = include_str!("prism.js");
-
-//     std::fs::write(output_dir.join("prism.css"), prism_css)?;
-//     std::fs::write(output_dir.join("prism.js"), prism_js)?;
-
-//     Ok(())
-// }
-
 fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOErrror> {
     let output_dir = args.get_out_dir_or_default();
     let snippie_sub_dir = output_dir.join("snippies");
@@ -242,6 +231,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Path::new(&args.snippie),
             notify::RecursiveMode::NonRecursive,
         )?;
+
+        file_watcher.watch(Path::new("frontend"), notify::RecursiveMode::Recursive)?;
 
         if args.serve {
             let app = Router::new()
