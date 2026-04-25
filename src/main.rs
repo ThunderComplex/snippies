@@ -152,7 +152,8 @@ fn create_snippies(args: &Args) -> Result<(), IOErrror> {
 
     let output_dir = args.get_out_dir_or_default();
 
-    let tera = Tera::new("frontend/templates/*.html").unwrap();
+    let mut tera = Tera::new("frontend/templates/*.html").unwrap();
+    tera.autoescape_on(vec![]);
 
     let snippies = render_snippies(args, &tera)?;
     write_snippies(args, &snippies)?;
