@@ -1,0 +1,165 @@
+:root {
+    --color-bg: #1f2c35;
+    --color-text: #c4dfcf;
+}
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+h1 {
+    text-align: center;
+}
+
+.snippie-container {
+    width: 50%;
+    background-color: #1e2430;
+    height: 80vh;
+    left: 25%;
+    position: relative;
+    overflow: scroll;
+}
+
+.snippie-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.snippie-list li {
+    background-color: #17202b;
+    margin: 20px 10px 20px 10px;
+    padding: 20px;
+    box-shadow: #232e3b 0px 0px 8px 3px;
+}
+
+.snippie-list li a {
+    text-decoration: none;
+    color: var(--color-text);
+}
+
+.new-snippie-container {
+    background-color: #1e2430;
+    color: var(--color-text);
+    position: relative;
+    left: 25%;
+    margin-top: 40px;
+    width: 50%;
+}
+
+form>label {
+    display: block;
+    margin: 10px 10%;
+}
+
+form>input {
+    width: 80%;
+    margin-bottom: 20px;
+    margin-left: 10%;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+form>textarea {
+    width: 80%;
+    margin-bottom: 20px;
+    margin-left: 10%;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+}
+
+form>button {
+    display: block;
+    background-color: #10A010;
+    color: black;
+    border-radius: 6px;
+    border: none;
+    padding: 10px;
+    position: relative;
+    left: 10%;
+}
+
+.header-bar {
+    position: fixed;
+    display: flex;
+    justify-content: end;
+    width: 100vw;
+    height: 30px;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 10px 0;
+    z-index: 10;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    right: 40px;
+    top: 60px;
+    background-color: black;
+    width: 20vw;
+    z-index: 20;
+    padding: 20px;
+}
+
+.dropdown-open {
+    display: block;
+}
+
+.theme-btn {
+    margin-right: 40px;
+}
+
+.picker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+}
+
+.picker-row label {
+    color: var(--color-text);
+}
+
+.color-input {
+    position: relative;
+    width: 32px;
+    height: 32px;
+}
+
+.color-input input {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid black;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#backlink {
+    color: #ffeeff;
+    font-size: 8pt;
+}
+
+code:not([class]) {
+    background-color: #112334;
+}
+
+blockquote {
+    background-color: #112334;
+    padding: 5px;
+    margin: 5px;
+}
+
+a {
+    color: #e7ab38;
+}
+
+img {
+    display: block;
+    margin: 10px;
+    max-width: 400px;
+    max-height: 400px;
+}

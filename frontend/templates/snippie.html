@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block header %}
+{{ super() }}
+<link rel="stylesheet" href="/static/prism.css" />
+{% endblock header %}
+
+{% block content %}
+<a id="backlink" href="/">back</a>
+{{ content }}
+{% endblock content %}
+
+{% block footer %}
+<script src="/prism.js" async></script>
+{% endblock footer %}

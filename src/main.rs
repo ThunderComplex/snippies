@@ -4,12 +4,12 @@ use notify::{Config, EventKind, RecommendedWatcher, Watcher};
 use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
-    fmt::Write,
     fs::OpenOptions,
     io::{Error as IOErrror, Write as IOWrite},
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+use tera::Tera;
 use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::{info, warn};
@@ -61,46 +61,43 @@ impl Args {
     }
 }
 
-fn write_html_files(index: String, snippies: Vec<Snippie>, args: &Args) -> Result<(), IOErrror> {
-    let output_dir = args.get_out_dir_or_default();
+// fn write_assets(args: &Args) -> Result<(), IOErrror> {
+//     let output_dir = args.get_out_dir_or_default();
+//     let prism_css = include_str!("prism.css");
+//     let prism_js = include_str!("prism.js");
 
-    if !output_dir.exists() {
-        std::fs::create_dir_all(&output_dir)?;
+//     std::fs::write(output_dir.join("prism.css"), prism_css)?;
+//     std::fs::write(output_dir.join("prism.js"), prism_js)?;
+
+//     Ok(())
+// }
+
+fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOErrror> {
+    let output_dir = args.get_out_dir_or_default();
+    let snippie_sub_dir = output_dir.join("snippies");
+
+    if !snippie_sub_dir.exists() {
+        std::fs::create_dir_all(&snippie_sub_dir)?;
     } else if args.clear_output {
         info!("Clearing existing output directory");
         std::fs::remove_dir_all(&output_dir)?;
-        std::fs::create_dir_all(&output_dir)?;
+        std::fs::create_dir_all(&snippie_sub_dir)?;
     }
-
-    let index_path = output_dir.join("index.html");
-    std::fs::write(index_path, index)?;
-
-    let error_path = output_dir.join("error.html");
-    std::fs::write(error_path, include_str!("error.html"))?;
 
     for snippie in snippies {
-        let snippie_path = output_dir.join(format!("{}.html", snippie.title));
+        let snippie_path = snippie_sub_dir.join(format!("{}.html", snippie.title));
 
-        std::fs::write(snippie_path, snippie.contents)?;
+        std::fs::write(snippie_path, &snippie.contents)?;
     }
 
     Ok(())
 }
 
-fn write_assets(args: &Args) -> Result<(), IOErrror> {
-    let output_dir = args.get_out_dir_or_default();
-    let prism_css = include_str!("prism.css");
-    let prism_js = include_str!("prism.js");
-
-    std::fs::write(output_dir.join("prism.css"), prism_css)?;
-    std::fs::write(output_dir.join("prism.js"), prism_js)?;
-
-    Ok(())
-}
-
-fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, IOErrror> {
-    let files = std::fs::read_dir(path)?;
+fn render_snippies(args: &Args, tera: &Tera) -> Result<Vec<Snippie>, IOErrror> {
+    let files = std::fs::read_dir(&args.snippie)?;
     let mut snippies = vec![];
+    let mut tera_context = tera::Context::new();
+    tera_context.insert("title", "Snippie");
 
     for file in files.flatten() {
         let file_path = file.path();
@@ -117,10 +114,9 @@ fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, IOErrror> {
         if let Some(title) = file_name {
             let snippie_file_contents = std::fs::read_to_string(file_path)?;
             let snippie_rendered = markdown::to_html(&snippie_file_contents);
-            let snippie_template = include_str!("template.html");
-            let snippie_content = snippie_template
-                .replace(r"{{$_TITLE}}", &title)
-                .replace(r"{{$_CONTENT}}", &snippie_rendered);
+            tera_context.insert("content", &snippie_rendered);
+
+            let snippie_content = tera.render("snippie.html", &tera_context).unwrap();
 
             snippies.push(Snippie {
                 title,
@@ -132,22 +128,43 @@ fn render_snippies_in_path(path: &Path) -> Result<Vec<Snippie>, IOErrror> {
     Ok(snippies)
 }
 
+fn copy_static_files(args: &Args) -> Result<(), IOErrror> {
+    let output_dir = args.get_out_dir_or_default();
+    let static_dir = output_dir.join("static");
+
+    if !static_dir.exists() {
+        std::fs::create_dir_all(&static_dir)?;
+    } else {
+        info!("Clearing existing output directory");
+        std::fs::remove_dir_all(&static_dir)?;
+        std::fs::create_dir_all(&static_dir)?;
+    }
+
+    std::fs::copy("frontend/static/app.css", static_dir.join("app.css"))?;
+    std::fs::copy("frontend/static/prism.css", static_dir.join("prism.css"))?;
+    std::fs::copy("frontend/static/prism.js", static_dir.join("prism.js"))?;
+
+    Ok(())
+}
+
 fn create_snippies(args: &Args) -> Result<(), IOErrror> {
     info!("Creating snippies");
 
-    let index = include_str!("index.html");
+    let output_dir = args.get_out_dir_or_default();
 
-    let snippies = render_snippies_in_path(Path::new(&args.snippie))?;
+    let tera = Tera::new("frontend/templates/*.html").unwrap();
 
-    let snippie_links = snippies.iter().fold(String::new(), |mut acc, s| {
-        let _ = write!(acc, "<li><a href='{}.html'>{}</a></li>", s.title, s.title);
-        acc
-    });
+    let snippies = render_snippies(args, &tera)?;
+    write_snippies(args, &snippies)?;
 
-    let snippie_index = index.replace(r"{{$_CONTENT}}", &snippie_links);
+    let mut tera_context = tera::Context::new();
+    tera_context.insert("title", "Snippie");
+    tera_context.insert("snippies", &snippies);
+    let rendered = tera.render("index.html", &tera_context).unwrap();
 
-    let _ = write_html_files(snippie_index, snippies, args);
-    let _ = write_assets(args);
+    std::fs::write(output_dir.join("index.html"), rendered)?;
+
+    copy_static_files(args)?;
 
     info!("Snippies created successfully");
     Ok(())
@@ -223,9 +240,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         if args.serve {
             let app = Router::new()
-                .route("/new", post(new_snippie_route))
+                .route_service("/", ServeFile::new(output_dir.join("index.html")))
                 .route_service("/error", ServeFile::new(&error_path))
-                .fallback_service(ServeDir::new(&output_dir))
+                .route("/new", post(new_snippie_route))
+                .nest_service("/snippie", ServeDir::new(output_dir.join("snippies")))
+                .nest_service("/static", ServeDir::new(output_dir.join("static")))
                 .with_state(args.clone());
 
             let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
