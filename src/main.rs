@@ -105,12 +105,12 @@ fn render_snippies(args: &Args, tera: &Tera) -> Result<Vec<Snippie>, IOErrror> {
             let snippie_rendered = markdown::to_html(&snippie_file_contents);
             tera_context.insert("content", &snippie_rendered);
 
-            let snippie_content = tera.render("snippie.html", &tera_context).unwrap();
-
-            snippies.push(Snippie {
-                title,
-                contents: snippie_content,
-            });
+            if let Ok(snippie_content) = tera.render("snippie.html", &tera_context) {
+                snippies.push(Snippie {
+                    title,
+                    contents: snippie_content,
+                });
+            }
         }
     }
 
@@ -145,7 +145,8 @@ fn create_snippies(args: &Args) -> Result<(), IOErrror> {
 
     let output_dir = args.get_out_dir_or_default();
 
-    let mut tera = Tera::new("frontend/templates/*.html").unwrap();
+    let mut tera = Tera::new("frontend/templates/*.html")
+        .map_err(|tera_err| IOErrror::new(std::io::ErrorKind::Other, tera_err))?;
     tera.autoescape_on(vec![]);
 
     let snippies = render_snippies(args, &tera)?;
@@ -154,7 +155,9 @@ fn create_snippies(args: &Args) -> Result<(), IOErrror> {
     let mut tera_context = tera::Context::new();
     tera_context.insert("title", "Snippie");
     tera_context.insert("snippies", &snippies);
-    let rendered = tera.render("index.html", &tera_context).unwrap();
+    let rendered = tera
+        .render("index.html", &tera_context)
+        .map_err(|tera_err| IOErrror::new(std::io::ErrorKind::Other, tera_err))?;
 
     std::fs::write(output_dir.join("index.html"), rendered)?;
 
