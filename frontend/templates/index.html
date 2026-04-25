@@ -20,8 +20,6 @@
 
 <h1>Snippies</h1>
 
-<input type="color" id="pick-text" value="#c4dfcf">
-
 <div class="snippie-container">
     <ul class="snippie-list">
         {% for snippie in snippies %}
@@ -48,9 +46,16 @@
 
 {% block footer %}
 <script>
-    document.getElementById('pick-text').addEventListener('input', e => {
-        document.documentElement.style.setProperty('--color-text', e.target.value);
-    });
+    const inputs = document.getElementsByTagName('input');
+
+    for (const input of inputs) {
+        if (input.type === 'color') {
+            input.addEventListener('input', e => {
+                const attribute = e.target.id.substr(2);
+                document.documentElement.style.setProperty(`--color-${attribute}`, e.target.value);
+            })
+        }
+    }
 
     function toggleDropdown() {
         const chevron = document.getElementById('chevron');
@@ -59,7 +64,6 @@
         const dropdown_open = dropdown.classList.toggle('dropdown-open');
 
         chevron.textContent = dropdown_open ? '▴' : '▾';
-
     }
 </script>
 {% endblock footer %}
