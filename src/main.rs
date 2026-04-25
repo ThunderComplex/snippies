@@ -143,6 +143,10 @@ fn copy_static_files(args: &Args) -> Result<(), IOErrror> {
     std::fs::copy("frontend/static/app.css", static_dir.join("app.css"))?;
     std::fs::copy("frontend/static/prism.css", static_dir.join("prism.css"))?;
     std::fs::copy("frontend/static/prism.js", static_dir.join("prism.js"))?;
+    std::fs::copy(
+        "frontend/static/favicon.ico",
+        static_dir.join("favicon.ico"),
+    )?;
 
     Ok(())
 }
@@ -243,6 +247,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let app = Router::new()
                 .route_service("/", ServeFile::new(output_dir.join("index.html")))
                 .route_service("/error", ServeFile::new(&error_path))
+                .route_service(
+                    "/favicon.ico",
+                    ServeFile::new(output_dir.join("static").join("favicon.ico")),
+                )
                 .route("/new", post(new_snippie_route))
                 .nest_service("/snippie", ServeDir::new(output_dir.join("snippies")))
                 .nest_service("/static", ServeDir::new(output_dir.join("static")))
