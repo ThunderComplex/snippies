@@ -27,6 +27,34 @@
                 <label>Text</label>
                 <div class="color-input"><input type="color" id="c-text" value="#ffffff"></div>
             </div>
+            <div class="picker-row">
+                <label>Container</label>
+                <div class="color-input"><input type="color" id="c-container" value="#1e2430"></div>
+            </div>
+            <div class="picker-row">
+                <label>List Item</label>
+                <div class="color-input"><input type="color" id="c-list-item" value="#17202b"></div>
+            </div>
+            <div class="picker-row">
+                <label>List Shadow</label>
+                <div class="color-input"><input type="color" id="c-list-shadow" value="#232e3b"></div>
+            </div>
+            <div class="picker-row">
+                <label>Primary</label>
+                <div class="color-input"><input type="color" id="c-primary" value="#10A010"></div>
+            </div>
+            <div class="picker-row">
+                <label>Text Highlight</label>
+                <div class="color-input"><input type="color" id="c-text-highlight" value="#e7ab38"></div>
+            </div>
+            <div class="picker-row">
+                <label>Code Background</label>
+                <div class="color-input"><input type="color" id="c-code-bg" value="#112334"></div>
+            </div>
+            <div class="picker-row">
+                <label>Back Link</label>
+                <div class="color-input"><input type="color" id="c-back-link" value="#ffeeff"></div>
+            </div>
         </div>
     </div>
 
@@ -41,9 +69,20 @@
 
         for (const input of inputs) {
             if (input.type === 'color') {
+                const colorName = `--color-${input.id.substr(2)}`;
+                const savedColor = localStorage.getItem(colorName);
+
+                if (savedColor) {
+                    document.documentElement.style.setProperty(colorName, savedColor);
+                    input.value = savedColor;
+                }
+
                 input.addEventListener('input', e => {
                     const attribute = e.target.id.substr(2);
-                    document.documentElement.style.setProperty(`--color-${attribute}`, e.target.value);
+                    const colorName = `--color-${attribute}`;
+                    const newValue = e.target.value;
+                    document.documentElement.style.setProperty(colorName, newValue);
+                    localStorage.setItem(colorName, newValue);
                 })
             }
         }
