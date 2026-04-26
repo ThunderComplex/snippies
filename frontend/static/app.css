@@ -133,7 +133,7 @@ form>button {
 }
 
 .picker-row label {
-    color: var(--color-text);
+    color: white;
 }
 
 .color-input {
