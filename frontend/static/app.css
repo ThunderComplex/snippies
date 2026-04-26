@@ -47,7 +47,7 @@ h1 {
 }
 
 .new-snippie-container {
-    background-color: #1e2430;
+    background-color: var(--color-container);
     color: var(--color-text);
     position: relative;
     left: 25%;
@@ -101,6 +101,10 @@ form>button {
     z-index: 10;
 }
 
+.header-bar>* {
+    pointer-events: auto;
+}
+
 .dropdown {
     display: none;
     position: absolute;
@@ -117,7 +121,6 @@ form>button {
 }
 
 .theme-btn {
-    pointer-events: auto;
     margin-right: 40px;
 }
 
@@ -139,7 +142,6 @@ form>button {
 }
 
 .color-input input {
-    pointer-events: auto;
     width: 32px;
     height: 32px;
     padding: 0;
@@ -172,4 +174,38 @@ img {
     margin: 10px;
     max-width: 400px;
     max-height: 400px;
+}
+
+.swatch-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.preset-swatch {
+    border: 3px solid transparent;
+    padding: 5px;
+    cursor: pointer;
+    background-size: cover;
+    background-color: initial;
+    transition: all 0.2s ease;
+    width: 40px;
+    height: 40px;
+    border-radius: 5px;
+    flex-shrink: 0;
+}
+
+.preset-swatch:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+.preset-swatch.active {
+    border-color: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.preset-selector {
+    margin-top: -15px;
+    margin-bottom: 15px;
 }

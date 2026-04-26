@@ -18,14 +18,24 @@
             <span id="chevron" style="font-size:10px">▾</span>
         </button>
 
-        <div class="dropdown" id="dropdown">
+        <div class="dropdown dropdown-open" id="dropdown">
+            <div class="picker-row">
+                <label>Presets</label>
+            </div>
+            <div class="preset-selector picker-row">
+                <div id="preset-swatches" class="swatch-group">
+                    <button class="preset-swatch active" data-preset="default"
+                        style="background-color: #1f2c35;"></button>
+                    <button class="preset-swatch" data-preset="oceanic" style="background-color: #4bb0eb;"></button>
+                </div>
+            </div>
             <div class="picker-row">
                 <label>Background</label>
-                <div class="color-input"><input type="color" id="c-bg" value="#3b82f6"></div>
+                <div class="color-input"><input type="color" id="c-bg" value="#1f2c35"></div>
             </div>
             <div class="picker-row">
                 <label>Text</label>
-                <div class="color-input"><input type="color" id="c-text" value="#ffffff"></div>
+                <div class="color-input"><input type="color" id="c-text" value="#c4dfcf"></div>
             </div>
             <div class="picker-row">
                 <label>Container</label>
@@ -65,6 +75,47 @@
 
     {% block footer %}
     <script>
+        const PRESETS = {
+            'default': {
+                'c-bg': '#1f2c35',
+                'c-text': '#c4dfcf',
+                'c-container': '#1e2430',
+                'c-list-item': '#17202b',
+                'c-list-shadow': '#232e3b',
+                'c-primary': '#10A010',
+                'c-text-highlight': '#e7ab38',
+                'c-code-bg': '#112334',
+                'c-back-link': '#ffeeff'
+            },
+            'oceanic': {
+                'c-bg': '#429dd1',
+                'c-text': '#c9d2d4',
+                'c-container': '#2e637a',
+                'c-list-item': '#22627c',
+                'c-list-shadow': '#0f2f41',
+                'c-primary': '#ecda37',
+                'c-text-highlight': '#eee6cf',
+                'c-code-bg': '#1a3d4e',
+                'c-back-link': '#f1c9ef'
+            },
+        };
+
+        function applyPreset(presetName) {
+            const preset = PRESETS[presetName];
+            if (!preset) return;
+
+            for (const id in preset) {
+                const color = preset[id];
+                const input = document.getElementById(id);
+
+                input.value = color;
+                const attribute = id.substr(2);
+                const colorName = `--color-${attribute}`;
+                document.documentElement.style.setProperty(colorName, color);
+                localStorage.setItem(colorName, color);
+            }
+        }
+
         const inputs = document.getElementsByTagName('input');
 
         for (const input of inputs) {
@@ -86,6 +137,16 @@
                 })
             }
         }
+
+        const swatches = document.getElementById('preset-swatches');
+        swatches.addEventListener('click', e => {
+            const button = e.target.closest('.preset-swatch');
+            const presetName = button.dataset.preset;
+            applyPreset(presetName);
+
+            document.querySelectorAll('.preset-swatch').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+        });
 
         function toggleDropdown() {
             const chevron = document.getElementById('chevron');
