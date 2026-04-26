@@ -110,6 +110,7 @@ form>button {
 }
 
 .theme-btn {
+    pointer-events: auto;
     margin-right: 40px;
 }
 
@@ -131,6 +132,7 @@ form>button {
 }
 
 .color-input input {
+    pointer-events: auto;
     width: 32px;
     height: 32px;
     padding: 0;
