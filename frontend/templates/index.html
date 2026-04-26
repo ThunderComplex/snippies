@@ -1,23 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="header-bar">
-    <button class="theme-btn" id="theme-dropdown" onclick="toggleDropdown()">
-        Theme
-        <span id="chevron" style="font-size:10px">▾</span>
-    </button>
-
-    <div class="dropdown" id="dropdown">
-        <div class="picker-row">
-            <label>Background</label>
-            <div class="color-input"><input type="color" id="c-bg" value="#3b82f6"></div>
-        </div>
-        <div class="picker-row">
-            <label>Text</label>
-            <div class="color-input"><input type="color" id="c-text" value="#ffffff"></div>
-        </div>
-    </div>
-</div>
-
 <h1>Snippies</h1>
 
 <div class="snippie-container">
@@ -43,27 +25,3 @@
     </form>
 </div>
 {% endblock content %}
-
-{% block footer %}
-<script>
-    const inputs = document.getElementsByTagName('input');
-
-    for (const input of inputs) {
-        if (input.type === 'color') {
-            input.addEventListener('input', e => {
-                const attribute = e.target.id.substr(2);
-                document.documentElement.style.setProperty(`--color-${attribute}`, e.target.value);
-            })
-        }
-    }
-
-    function toggleDropdown() {
-        const chevron = document.getElementById('chevron');
-        const dropdown = document.getElementById('dropdown');
-
-        const dropdown_open = dropdown.classList.toggle('dropdown-open');
-
-        chevron.textContent = dropdown_open ? '▴' : '▾';
-    }
-</script>
-{% endblock footer %}

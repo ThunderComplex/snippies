@@ -81,6 +81,7 @@ form>button {
 }
 
 .header-bar {
+    pointer-events: none;
     position: fixed;
     display: flex;
     justify-content: end;
