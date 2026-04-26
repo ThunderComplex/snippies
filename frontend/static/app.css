@@ -1,6 +1,13 @@
 :root {
     --color-bg: #1f2c35;
     --color-text: #c4dfcf;
+    --color-container: #1e2430;
+    --color-list-item: #17202b;
+    --color-list-shadow: #232e3b;
+    --color-primary: #10A010;
+    --color-text-highlight: #e7ab38;
+    --color-code-bg: #112334;
+    --color-back-link: #ffeeff;
 }
 
 body {
@@ -14,7 +21,7 @@ h1 {
 
 .snippie-container {
     width: 50%;
-    background-color: #1e2430;
+    background-color: var(--color-container);
     height: 80vh;
     left: 25%;
     position: relative;
@@ -28,10 +35,10 @@ h1 {
 }
 
 .snippie-list li {
-    background-color: #17202b;
+    background-color: var(--color-list-item);
     margin: 20px 10px 20px 10px;
     padding: 20px;
-    box-shadow: #232e3b 0px 0px 8px 3px;
+    box-shadow: var(--color-list-shadow) 0px 0px 8px 3px;
 }
 
 .snippie-list li a {
@@ -71,7 +78,7 @@ form>textarea {
 
 form>button {
     display: block;
-    background-color: #10A010;
+    background-color: var(--color-primary);
     color: black;
     border-radius: 6px;
     border: none;
@@ -142,22 +149,22 @@ form>button {
 }
 
 #backlink {
-    color: #ffeeff;
+    color: var(--color-back-link);
     font-size: 8pt;
 }
 
 code:not([class]) {
-    background-color: #112334;
+    background-color: var(--color-code-bg);
 }
 
 blockquote {
-    background-color: #112334;
+    background-color: var(--color-code-bg);
     padding: 5px;
     margin: 5px;
 }
 
 a {
-    color: #e7ab38;
+    color: var(--color-text-highlight);
 }
 
 img {
