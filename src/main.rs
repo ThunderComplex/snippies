@@ -7,6 +7,7 @@ use axum::{
 };
 use base64::prelude::*;
 use clap::Parser;
+use dotenvy::dotenv;
 use notify::{Config, EventKind, RecommendedWatcher, Watcher};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -65,12 +66,6 @@ struct Args {
         help = "Start a server and watch for file changes"
     )]
     serve: bool,
-
-    #[arg(long, help = "Username required to create new snippies")]
-    new_snippie_user: Option<String>,
-
-    #[arg(long, help = "Password required to create new snippies")]
-    new_snippie_password: Option<String>,
 }
 
 impl Args {
@@ -195,13 +190,18 @@ fn get_current_timestamp() -> u64 {
 }
 
 impl NewSnippieAuth {
-    fn from_args(args: &Args) -> Option<Self> {
-        match (&args.new_snippie_user, &args.new_snippie_password) {
-            (Some(user), Some(password)) => Some(Self {
-                user: user.clone(),
-                password: password.clone(),
-            }),
-            _ => None,
+    fn from_env() -> Result<Option<Self>, Box<dyn Error>> {
+        let user = std::env::var("SNIPPIES_NEW_SNIPPIE_USER").ok();
+        let password = std::env::var("SNIPPIES_NEW_SNIPPIE_PASSWORD").ok();
+
+        match (user, password) {
+            (Some(user), Some(password)) => Ok(Some(Self { user, password })),
+            (None, None) => Ok(None),
+            _ => Err(IOError::new(
+                std::io::ErrorKind::InvalidInput,
+                "Both SNIPPIES_NEW_SNIPPIE_USER and SNIPPIES_NEW_SNIPPIE_PASSWORD must be set together",
+            )
+            .into()),
         }
     }
 
@@ -219,8 +219,6 @@ impl NewSnippieAuth {
             BASE64_STANDARD.encode(format!("{}:{}", self.user, self.password));
         let expected_header = format!("Basic {}", encoded_credentials);
 
-        dbg!(&headers);
-
         headers
             .get(header::AUTHORIZATION)
             .and_then(|value| value.to_str().ok())
@@ -231,26 +229,11 @@ impl NewSnippieAuth {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let mut args = Args::parse();
-
-    if args.new_snippie_user.is_none() {
-        args.new_snippie_user = std::env::var("SNIPPIES_NEW_SNIPPIE_USER").ok();
-    }
-
-    if args.new_snippie_password.is_none() {
-        args.new_snippie_password = std::env::var("SNIPPIES_NEW_SNIPPIE_PASSWORD").ok();
-    }
-
-    if args.new_snippie_user.is_some() ^ args.new_snippie_password.is_some() {
-        return Err(IOError::new(
-            std::io::ErrorKind::InvalidInput,
-            "Both SNIPPIES_NEW_SNIPPIE_USER and SNIPPIES_NEW_SNIPPIE_PASSWORD must be set together",
-        )
-        .into());
-    }
+    dotenv().ok();
+    let args = Args::parse();
 
     let file_watch_args = args.clone();
-    let new_snippie_auth = NewSnippieAuth::from_args(&args);
+    let new_snippie_auth = NewSnippieAuth::from_env()?;
     let output_dir = args.get_out_dir_or_default();
     let mut error_path = output_dir.clone();
     error_path.push("error.html");

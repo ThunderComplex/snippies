@@ -3,6 +3,7 @@
 /snippies
 !/snippies/iterate-range.md
 !/snippies/markdown-test.md
+.env
 
 logs
 *.log

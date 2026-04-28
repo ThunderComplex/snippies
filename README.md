@@ -17,30 +17,25 @@ Under the hood snippies uses prism.js for syntax highlighting.
 snippies [OPTIONS] --snippie-dir <SNIPPIE_DIR>
 
 Options:
-  -s, --snippie <SNIPPIE>
-          Directory where snippie .md files reside
-  -o, --out <OUT>
-          Output directory, ready to serve
-  -c, --clear-output
-          Delete output directory contents before writing new files
-  -p <PORT>
-          Port to listen on [default: 8192]
-      --watch
-          Watch for file changes (not needed when 'dev' is enabled)
-      --serve
-          Start a server and watch for file changes
-      --new-snippie-user <NEW_SNIPPIE_USER>
-          Username required to create new snippies
-      --new-snippie-password <NEW_SNIPPIE_PASSWORD>
-          Password required to create new snippies
-  -h, --help
-          Print help
+  -s, --snippie <SNIPPIE>  Directory where snippie .md files reside
+  -o, --out <OUT>          Output directory, ready to serve
+  -c, --clear-output       Delete output directory contents before writing new files
+  -p <PORT>                Port to listen on [default: 8192]
+      --watch              Watch for file changes (not needed when 'dev' is enabled)
+      --serve              Start a server and watch for file changes
+  -h, --help               Print help
 ```
 
-You can also set `SNIPPIES_NEW_SNIPPIE_USER` and `SNIPPIES_NEW_SNIPPIE_PASSWORD`
-instead of passing the credentials on the command line. The `/new` route will
-require HTTP Basic Auth whenever credentials are configured.
-Put the server behind HTTPS when hosting it publicly.
+Create a local `.env` file in the project root to enable HTTP Basic Auth for
+`POST /new`:
+
+```env
+SNIPPIES_NEW_SNIPPIE_USER=your-username
+SNIPPIES_NEW_SNIPPIE_PASSWORD=your-password
+```
+
+The `/new` route will require credentials whenever both values are set. Put the
+server behind HTTPS when hosting it publicly.
 
 ## Development notice  
 

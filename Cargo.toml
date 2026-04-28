@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 base64 = "0.22"
 clap = { version = "4.6", features = ["derive"] }
+dotenvy = "0.15"
 markdown = "1.0"
 tokio = { version = "1.52", features = ["full"] }
 tracing = "0.1"
