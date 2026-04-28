@@ -1,11 +1,18 @@
-use axum::{Form, Router, extract::State, response::Redirect, routing::post};
+use axum::{
+    Form, Router,
+    extract::State,
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Redirect, Response},
+    routing::post,
+};
+use base64::prelude::*;
 use clap::Parser;
 use notify::{Config, EventKind, RecommendedWatcher, Watcher};
 use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     fs::OpenOptions,
-    io::{Error as IOErrror, Write as IOWrite},
+    io::{Error as IOError, Write as IOWrite},
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -18,6 +25,12 @@ use tracing::{info, warn};
 struct Snippie {
     title: String,
     contents: String,
+}
+
+#[derive(Clone, Debug)]
+struct NewSnippieAuth {
+    user: String,
+    password: String,
 }
 
 #[derive(Clone, Debug, Parser)]
@@ -52,6 +65,12 @@ struct Args {
         help = "Start a server and watch for file changes"
     )]
     serve: bool,
+
+    #[arg(long, help = "Username required to create new snippies")]
+    new_snippie_user: Option<String>,
+
+    #[arg(long, help = "Password required to create new snippies")]
+    new_snippie_password: Option<String>,
 }
 
 impl Args {
@@ -61,7 +80,7 @@ impl Args {
     }
 }
 
-fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOErrror> {
+fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOError> {
     let output_dir = args.get_out_dir_or_default();
     let snippie_sub_dir = output_dir.join("snippies");
 
@@ -82,7 +101,7 @@ fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOErrror> 
     Ok(())
 }
 
-fn render_snippies(args: &Args, tera: &Tera) -> Result<Vec<Snippie>, IOErrror> {
+fn render_snippies(args: &Args, tera: &Tera) -> Result<Vec<Snippie>, IOError> {
     let files = std::fs::read_dir(&args.snippie)?;
     let mut snippies = vec![];
     let mut tera_context = tera::Context::new();
@@ -117,7 +136,7 @@ fn render_snippies(args: &Args, tera: &Tera) -> Result<Vec<Snippie>, IOErrror> {
     Ok(snippies)
 }
 
-fn copy_static_files(args: &Args) -> Result<(), IOErrror> {
+fn copy_static_files(args: &Args) -> Result<(), IOError> {
     let output_dir = args.get_out_dir_or_default();
     let static_dir = output_dir.join("static");
 
@@ -140,13 +159,13 @@ fn copy_static_files(args: &Args) -> Result<(), IOErrror> {
     Ok(())
 }
 
-fn create_snippies(args: &Args) -> Result<(), IOErrror> {
+fn create_snippies(args: &Args) -> Result<(), IOError> {
     info!("Creating snippies");
 
     let output_dir = args.get_out_dir_or_default();
 
     let mut tera = Tera::new("frontend/templates/*.html")
-        .map_err(|tera_err| IOErrror::new(std::io::ErrorKind::Other, tera_err))?;
+        .map_err(|tera_err| IOError::new(std::io::ErrorKind::Other, tera_err))?;
     tera.autoescape_on(vec![]);
 
     let snippies = render_snippies(args, &tera)?;
@@ -157,7 +176,7 @@ fn create_snippies(args: &Args) -> Result<(), IOErrror> {
     tera_context.insert("snippies", &snippies);
     let rendered = tera
         .render("index.html", &tera_context)
-        .map_err(|tera_err| IOErrror::new(std::io::ErrorKind::Other, tera_err))?;
+        .map_err(|tera_err| IOError::new(std::io::ErrorKind::Other, tera_err))?;
 
     std::fs::write(output_dir.join("index.html"), rendered)?;
 
@@ -175,11 +194,63 @@ fn get_current_timestamp() -> u64 {
         .as_secs()
 }
 
+impl NewSnippieAuth {
+    fn from_args(args: &Args) -> Option<Self> {
+        match (&args.new_snippie_user, &args.new_snippie_password) {
+            (Some(user), Some(password)) => Some(Self {
+                user: user.clone(),
+                password: password.clone(),
+            }),
+            _ => None,
+        }
+    }
+
+    fn unauthorized_response() -> Response {
+        (
+            StatusCode::UNAUTHORIZED,
+            [(header::WWW_AUTHENTICATE, r#"Basic realm="snippies""#)],
+            "Authentication required",
+        )
+            .into_response()
+    }
+
+    fn is_authorized(&self, headers: &HeaderMap) -> bool {
+        let encoded_credentials =
+            BASE64_STANDARD.encode(format!("{}:{}", self.user, self.password));
+        let expected_header = format!("Basic {}", encoded_credentials);
+
+        dbg!(&headers);
+
+        headers
+            .get(header::AUTHORIZATION)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value == expected_header)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let args = Args::parse();
+    let mut args = Args::parse();
+
+    if args.new_snippie_user.is_none() {
+        args.new_snippie_user = std::env::var("SNIPPIES_NEW_SNIPPIE_USER").ok();
+    }
+
+    if args.new_snippie_password.is_none() {
+        args.new_snippie_password = std::env::var("SNIPPIES_NEW_SNIPPIE_PASSWORD").ok();
+    }
+
+    if args.new_snippie_user.is_some() ^ args.new_snippie_password.is_some() {
+        return Err(IOError::new(
+            std::io::ErrorKind::InvalidInput,
+            "Both SNIPPIES_NEW_SNIPPIE_USER and SNIPPIES_NEW_SNIPPIE_PASSWORD must be set together",
+        )
+        .into());
+    }
+
     let file_watch_args = args.clone();
+    let new_snippie_auth = NewSnippieAuth::from_args(&args);
     let output_dir = args.get_out_dir_or_default();
     let mut error_path = output_dir.clone();
     error_path.push("error.html");
@@ -248,7 +319,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .route("/new", post(new_snippie_route))
                 .nest_service("/snippie", ServeDir::new(output_dir.join("snippies")))
                 .nest_service("/static", ServeDir::new(output_dir.join("static")))
-                .with_state(args.clone());
+                .with_state((args.clone(), new_snippie_auth.clone()));
 
             let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
             info!("Dev mode enabled. Listening on {}", args.port);
@@ -263,7 +334,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 #[axum::debug_handler]
-async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>) -> Redirect {
+async fn new_snippie_route(
+    State((state, auth)): State<(Args, Option<NewSnippieAuth>)>,
+    headers: HeaderMap,
+    Form(data): Form<Snippie>,
+) -> Result<Redirect, Response> {
+    if let Some(auth) = auth {
+        if !auth.is_authorized(&headers) {
+            return Err(NewSnippieAuth::unauthorized_response());
+        }
+    }
+
     info!("Creating new snippie: {:?}", &data.title);
 
     let mut snippie_file_path = PathBuf::from(state.snippie);
@@ -282,17 +363,17 @@ async fn new_snippie_route(State(state): State<Args>, Form(data): Form<Snippie>)
                     "Could not write to new Snippie file. Reason: {}",
                     write_error
                 );
-                Redirect::to("/error")
+                Ok(Redirect::to("/error"))
             } else {
                 // Wait for snippies to be rebuilt, so we don't accidentally run into a 404 error
                 tokio::time::sleep(Duration::from_millis(100)).await;
 
-                Redirect::to("/")
+                Ok(Redirect::to("/"))
             }
         }
         Err(error) => {
             warn!("Could not create Snippie. Reason: {}", error);
-            Redirect::to("/error")
+            Ok(Redirect::to("/error"))
         }
     }
 }

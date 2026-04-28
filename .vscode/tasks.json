@@ -11,7 +11,11 @@
 				"-c",
 				"-o",
 				"output",
-				"--serve"
+				"--serve",
+				"--new-snippie-user",
+				"vscadmin",
+				"--new-snippie-password",
+				"vscsecret"
 			],
 			"problemMatcher": [
 				"$rustc"
