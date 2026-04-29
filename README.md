@@ -17,13 +17,10 @@ Under the hood snippies uses prism.js for syntax highlighting.
 snippies [OPTIONS] --snippie-dir <SNIPPIE_DIR>
 
 Options:
-  -s, --snippie <SNIPPIE>  Directory where snippie .md files reside
-  -o, --out <OUT>          Output directory, ready to serve
-  -c, --clear-output       Delete output directory contents before writing new files
-  -p <PORT>                Port to listen on [default: 8192]
-      --watch              Watch for file changes (not needed when 'dev' is enabled)
-      --serve              Start a server and watch for file changes
-  -h, --help               Print help
+  -s, --snippie-dir <SNIPPIE_DIR>  Directory where snippie .md files reside
+  -o, --out-dir <OUT_DIR>          Output directory, ready to serve
+  -p <PORT>                        Port to listen on [default: 8192]
+  -h, --help                       Print help
 ```
 
 Create a local `.env` file in the project root to enable HTTP Basic Auth for

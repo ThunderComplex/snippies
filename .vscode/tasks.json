@@ -6,12 +6,10 @@
 			"command": "run",
 			"args": [
 				"--",
-				"--snippie",
+				"--snippie-dir",
 				"snippies",
-				"-c",
 				"-o",
 				"output",
-				"--serve"
 			],
 			"problemMatcher": [
 				"$rustc"

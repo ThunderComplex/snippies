@@ -37,40 +37,18 @@ struct NewSnippieAuth {
 #[derive(Clone, Debug, Parser)]
 struct Args {
     #[arg(short, long, help = "Directory where snippie .md files reside")]
-    snippie: String,
+    snippie_dir: String,
 
     #[arg(short, long, help = "Output directory, ready to serve")]
-    out: Option<String>,
-
-    #[arg(
-        short,
-        long,
-        default_value_t = false,
-        help = "Delete output directory contents before writing new files"
-    )]
-    clear_output: bool,
+    out_dir: Option<String>,
 
     #[arg(short, default_value_t = 8192, help = "Port to listen on")]
     port: u16,
-
-    #[arg(
-        long,
-        default_value_t = false,
-        help = "Watch for file changes (not needed when 'dev' is enabled)"
-    )]
-    watch: bool,
-
-    #[arg(
-        long,
-        default_value_t = false,
-        help = "Start a server and watch for file changes"
-    )]
-    serve: bool,
 }
 
 impl Args {
     fn get_out_dir_or_default(&self) -> PathBuf {
-        let output_dir = self.out.clone().unwrap_or(String::from("./output"));
+        let output_dir = self.out_dir.clone().unwrap_or(String::from("./output"));
         PathBuf::from(output_dir)
     }
 }
@@ -81,7 +59,7 @@ fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOError> {
 
     if !snippie_sub_dir.exists() {
         std::fs::create_dir_all(&snippie_sub_dir)?;
-    } else if args.clear_output {
+    } else {
         info!("Clearing existing output directory");
         std::fs::remove_dir_all(&output_dir)?;
         std::fs::create_dir_all(&snippie_sub_dir)?;
@@ -97,7 +75,7 @@ fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOError> {
 }
 
 fn render_snippies(args: &Args, tera: &Tera) -> Result<Vec<Snippie>, IOError> {
-    let files = std::fs::read_dir(&args.snippie)?;
+    let files = std::fs::read_dir(&args.snippie_dir)?;
     let mut snippies = vec![];
     let mut tera_context = tera::Context::new();
     tera_context.insert("title", "Snippie");
@@ -253,79 +231,72 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     create_snippies(&args)?;
 
-    if args.serve || args.watch {
-        let (file_watch_tx, mut file_watch_rx) =
-            tokio::sync::watch::channel(get_current_timestamp());
+    let (file_watch_tx, mut file_watch_rx) = tokio::sync::watch::channel(get_current_timestamp());
 
-        let file_watch_handle = tokio::spawn(async move {
-            loop {
-                let updated = file_watch_rx.changed().await;
+    let file_watch_handle = tokio::spawn(async move {
+        loop {
+            let updated = file_watch_rx.changed().await;
 
-                match updated {
-                    Ok(()) => {
-                        let update_time = *file_watch_rx.borrow_and_update();
+            match updated {
+                Ok(()) => {
+                    let update_time = *file_watch_rx.borrow_and_update();
 
-                        if update_time == 0 {
-                            info!("File watch thread exiting. Reason: Exit code received");
-                            break;
-                        }
-
-                        if let Err(error) = create_snippies(&file_watch_args) {
-                            warn!("Could not create snippies. Error: {}", error);
-                        }
-                    }
-                    Err(e) => {
-                        info!("File watch thread exiting. Reason: {}", e);
+                    if update_time == 0 {
+                        info!("File watch thread exiting. Reason: Exit code received");
                         break;
                     }
+
+                    if let Err(error) = create_snippies(&file_watch_args) {
+                        warn!("Could not create snippies. Error: {}", error);
+                    }
+                }
+                Err(e) => {
+                    info!("File watch thread exiting. Reason: {}", e);
+                    break;
                 }
             }
-
-            info!("File watch build thread finished");
-        });
-
-        let mut file_watcher = RecommendedWatcher::new(
-            move |e: Result<notify::Event, notify::Error>| match e {
-                Ok(e) => match e.kind {
-                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                        file_watch_tx.send(get_current_timestamp()).unwrap();
-                    }
-                    _ => info!("Ignored event of kind {:?}", e.kind),
-                },
-                Err(_) => file_watch_tx.send(0).unwrap(),
-            },
-            Config::default(),
-        )?;
-
-        file_watcher.watch(
-            Path::new(&args.snippie),
-            notify::RecursiveMode::NonRecursive,
-        )?;
-
-        file_watcher.watch(Path::new("frontend"), notify::RecursiveMode::Recursive)?;
-
-        if args.serve {
-            let app = Router::new()
-                .route_service("/", ServeFile::new(output_dir.join("index.html")))
-                .route_service("/error", ServeFile::new(output_dir.join("error.html")))
-                .route_service(
-                    "/favicon.ico",
-                    ServeFile::new(output_dir.join("static").join("favicon.ico")),
-                )
-                .route("/api/new", post(new_snippie_route))
-                .route_service("/new", ServeFile::new(output_dir.join("new.html")))
-                .nest_service("/snippie", ServeDir::new(output_dir.join("snippies")))
-                .nest_service("/static", ServeDir::new(output_dir.join("static")))
-                .with_state((args.clone(), new_snippie_auth.clone()));
-
-            let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
-            info!("Dev mode enabled. Listening on {}", args.port);
-            axum::serve(listener, app).await?;
-        } else if args.watch {
-            info!("Listening for filesystem changes");
-            file_watch_handle.await?;
         }
-    }
+
+        info!("File watch build thread finished");
+    });
+
+    let mut file_watcher = RecommendedWatcher::new(
+        move |e: Result<notify::Event, notify::Error>| match e {
+            Ok(e) => match e.kind {
+                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                    file_watch_tx.send(get_current_timestamp()).unwrap();
+                }
+                _ => info!("Ignored event of kind {:?}", e.kind),
+            },
+            Err(_) => file_watch_tx.send(0).unwrap(),
+        },
+        Config::default(),
+    )?;
+
+    file_watcher.watch(
+        Path::new(&args.snippie_dir),
+        notify::RecursiveMode::NonRecursive,
+    )?;
+
+    file_watcher.watch(Path::new("frontend"), notify::RecursiveMode::Recursive)?;
+
+    let app = Router::new()
+        .route_service("/", ServeFile::new(output_dir.join("index.html")))
+        .route_service("/error", ServeFile::new(output_dir.join("error.html")))
+        .route_service(
+            "/favicon.ico",
+            ServeFile::new(output_dir.join("static").join("favicon.ico")),
+        )
+        .route("/api/new", post(new_snippie_route))
+        .route_service("/new", ServeFile::new(output_dir.join("new.html")))
+        .nest_service("/snippie", ServeDir::new(output_dir.join("snippies")))
+        .nest_service("/static", ServeDir::new(output_dir.join("static")))
+        .with_state((args.clone(), new_snippie_auth.clone()));
+
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
+    info!("Dev mode enabled. Listening on {}", args.port);
+    axum::serve(listener, app).await?;
+    file_watch_handle.await?;
 
     Ok(())
 }
@@ -344,7 +315,7 @@ async fn new_snippie_route(
 
     info!("Creating new snippie: {:?}", &data.title);
 
-    let mut snippie_file_path = PathBuf::from(state.snippie);
+    let mut snippie_file_path = PathBuf::from(state.snippie_dir);
     snippie_file_path.push(&data.title);
     snippie_file_path.add_extension("md");
 
