@@ -44,6 +44,11 @@ Theme presets are loaded from `frontend/static/theme-presets.jsonl`. One preset 
 
 Note that you can optionally define a `swatch` property, but by default the preset swatch will adapt the color of `c-bg`.
 
+## Docker
+
+`docker build -f docker/Dockerfile -t thundercomplex/snippies .`  
+`docker run -p8192:8192 -v./snippies:/application/snippies thundercomplex/snippies`
+
 ## Development notice  
 
 This project is a heavy work-in-progress and still in early stages of development.  
