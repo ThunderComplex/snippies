@@ -5,8 +5,6 @@
 !/snippies/markdown-test.md
 .env
 
-/frontend/static/theme-presets.jsonl
-
 logs
 *.log
 npm-debug.log*
