@@ -13,6 +13,10 @@
 
 <body>
     <div class="header-bar">
+        <button class="new-snippie-button" id="new-snippie-button" onclick="location.href='/new'">
+            New
+        </button>
+
         <button class="theme-btn" id="theme-dropdown" onclick="toggleDropdown()">
             Theme
             <span id="chevron" style="font-size:10px">▾</span>
@@ -24,10 +28,12 @@
             </div>
             <div class="preset-selector picker-row">
                 <div id="preset-swatches" class="swatch-group">
-                    <button class="preset-swatch active" data-preset="default"
+                    <button class="preset-swatch active" data-preset="default" title="default"
                         style="background-color: #1f2c35;"></button>
-                    <button class="preset-swatch" data-preset="oceanic" style="background-color: #4bb0eb;"></button>
-                    <button class="preset-swatch" data-preset="burnt-umber" style="background-color: #8A3324;"></button>
+                    <button class="preset-swatch" data-preset="oceanic" title="oceanic"
+                        style="background-color: #4bb0eb;"></button>
+                    <button class="preset-swatch" data-preset="burnt-umber" title="burnt-umber"
+                        style="background-color: #8A3324;"></button>
                 </div>
             </div>
             <div class="picker-row">

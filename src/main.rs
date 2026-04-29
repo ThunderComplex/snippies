@@ -154,6 +154,20 @@ fn copy_static_files(args: &Args) -> Result<(), IOError> {
     Ok(())
 }
 
+fn tera_render(
+    tera: &Tera,
+    ctx: &tera::Context,
+    template: &str,
+    output_dir: &Path,
+) -> Result<(), IOError> {
+    let rendered = tera
+        .render(template, ctx)
+        .map_err(|tera_err| IOError::new(std::io::ErrorKind::Other, tera_err))?;
+
+    std::fs::write(output_dir.join(template), rendered)?;
+    Ok(())
+}
+
 fn create_snippies(args: &Args) -> Result<(), IOError> {
     info!("Creating snippies");
 
@@ -169,11 +183,10 @@ fn create_snippies(args: &Args) -> Result<(), IOError> {
     let mut tera_context = tera::Context::new();
     tera_context.insert("title", "Snippie");
     tera_context.insert("snippies", &snippies);
-    let rendered = tera
-        .render("index.html", &tera_context)
-        .map_err(|tera_err| IOError::new(std::io::ErrorKind::Other, tera_err))?;
 
-    std::fs::write(output_dir.join("index.html"), rendered)?;
+    tera_render(&tera, &tera_context, "index.html", &output_dir)?;
+    tera_render(&tera, &tera_context, "error.html", &output_dir)?;
+    tera_render(&tera, &tera_context, "new.html", &output_dir)?;
 
     copy_static_files(args)?;
 
@@ -294,12 +307,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         if args.serve {
             let app = Router::new()
                 .route_service("/", ServeFile::new(output_dir.join("index.html")))
-                .route_service("/error", ServeFile::new(&error_path))
+                .route_service("/error", ServeFile::new(output_dir.join("error.html")))
                 .route_service(
                     "/favicon.ico",
                     ServeFile::new(output_dir.join("static").join("favicon.ico")),
                 )
-                .route("/new", post(new_snippie_route))
+                .route("/api/new", post(new_snippie_route))
+                .route_service("/new", ServeFile::new(output_dir.join("new.html")))
                 .nest_service("/snippie", ServeDir::new(output_dir.join("snippies")))
                 .nest_service("/static", ServeDir::new(output_dir.join("static")))
                 .with_state((args.clone(), new_snippie_auth.clone()));
