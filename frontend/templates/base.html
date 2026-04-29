@@ -27,14 +27,7 @@
                 <label>Presets</label>
             </div>
             <div class="preset-selector picker-row">
-                <div id="preset-swatches" class="swatch-group">
-                    <button class="preset-swatch active" data-preset="default" title="default"
-                        style="background-color: #1f2c35;"></button>
-                    <button class="preset-swatch" data-preset="oceanic" title="oceanic"
-                        style="background-color: #4bb0eb;"></button>
-                    <button class="preset-swatch" data-preset="burnt-umber" title="burnt-umber"
-                        style="background-color: #8A3324;"></button>
-                </div>
+                <div id="preset-swatches" class="swatch-group"></div>
             </div>
             <div class="picker-row">
                 <label>Background</label>
@@ -81,100 +74,7 @@
     </div>
 
     {% block footer %}
-    <script>
-        const PRESETS = {
-            'default': {
-                'c-bg': '#1f2c35',
-                'c-text': '#c4dfcf',
-                'c-container': '#1e2430',
-                'c-list-item': '#17202b',
-                'c-list-shadow': '#232e3b',
-                'c-primary': '#10A010',
-                'c-text-highlight': '#e7ab38',
-                'c-code-bg': '#112334',
-                'c-back-link': '#ffeeff'
-            },
-            'oceanic': {
-                'c-bg': '#429dd1',
-                'c-text': '#c9d2d4',
-                'c-container': '#2e637a',
-                'c-list-item': '#22627c',
-                'c-list-shadow': '#0f2f41',
-                'c-primary': '#ecda37',
-                'c-text-highlight': '#eee6cf',
-                'c-code-bg': '#1a3d4e',
-                'c-back-link': '#f1c9ef'
-            },
-            'burnt-umber': {
-                'c-bg': '#8a3324',
-                'c-text': '#1a1f1c',
-                'c-container': '#a2625a',
-                'c-list-item': '#7a5142',
-                'c-list-shadow': '#54362b',
-                'c-primary': '#10A010',
-                'c-text-highlight': '#3849e7',
-                'c-code-bg': '#112334',
-                'c-back-link': '#ffeeff'
-            },
-        };
-
-        function applyPreset(presetName) {
-            const preset = PRESETS[presetName];
-            if (!preset) return;
-
-            for (const id in preset) {
-                const color = preset[id];
-                const input = document.getElementById(id);
-
-                input.value = color;
-                const attribute = id.substr(2);
-                const colorName = `--color-${attribute}`;
-                document.documentElement.style.setProperty(colorName, color);
-                localStorage.setItem(colorName, color);
-            }
-        }
-
-        const inputs = document.getElementsByTagName('input');
-
-        for (const input of inputs) {
-            if (input.type === 'color') {
-                const colorName = `--color-${input.id.substr(2)}`;
-                const savedColor = localStorage.getItem(colorName);
-
-                if (savedColor) {
-                    document.documentElement.style.setProperty(colorName, savedColor);
-                    input.value = savedColor;
-                }
-
-                input.addEventListener('input', e => {
-                    const attribute = e.target.id.substr(2);
-                    const colorName = `--color-${attribute}`;
-                    const newValue = e.target.value;
-                    document.documentElement.style.setProperty(colorName, newValue);
-                    localStorage.setItem(colorName, newValue);
-                })
-            }
-        }
-
-        const swatches = document.getElementById('preset-swatches');
-        swatches.addEventListener('click', e => {
-            const button = e.target.closest('.preset-swatch');
-            const presetName = button.dataset.preset;
-            applyPreset(presetName);
-
-            document.querySelectorAll('.preset-swatch').forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-        });
-
-        function toggleDropdown() {
-            const chevron = document.getElementById('chevron');
-            const dropdown = document.getElementById('dropdown');
-
-            const dropdown_open = dropdown.classList.toggle('dropdown-open');
-
-            chevron.textContent = dropdown_open ? '▴' : '▾';
-        }
-    </script>
+    <script src="/static/theme.js"></script>
     {% endblock footer %}
 </body>
 

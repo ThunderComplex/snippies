@@ -122,6 +122,11 @@ fn copy_static_files(args: &Args) -> Result<(), IOError> {
     }
 
     std::fs::copy("frontend/static/app.css", static_dir.join("app.css"))?;
+    std::fs::copy("frontend/static/theme.js", static_dir.join("theme.js"))?;
+    std::fs::copy(
+        "frontend/static/theme-presets.jsonl",
+        static_dir.join("theme-presets.jsonl"),
+    )?;
     std::fs::copy("frontend/static/prism.css", static_dir.join("prism.css"))?;
     std::fs::copy("frontend/static/prism.js", static_dir.join("prism.js"))?;
     std::fs::copy(

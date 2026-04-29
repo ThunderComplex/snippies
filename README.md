@@ -34,6 +34,16 @@ SNIPPIES_NEW_SNIPPIE_PASSWORD=your-password
 The `/new` route will require credentials whenever both values are set. Put the
 server behind HTTPS when hosting it publicly.
 
+## Theme presets
+
+Theme presets are loaded from `frontend/static/theme-presets.jsonl`. One preset per line:
+
+```json
+{"name":"my-theme","colors":{"c-bg":"#1f2c35","c-text":"#c4dfcf","c-container":"#1e2430","c-list-item":"#17202b","c-list-shadow":"#232e3b","c-primary":"#10A010","c-text-highlight":"#e7ab38","c-code-bg":"#112334","c-back-link":"#ffeeff"}}
+```
+
+Note that you can optionally define a `swatch` property, but by default the preset swatch will adapt the color of `c-bg`.
+
 ## Development notice  
 
 This project is a heavy work-in-progress and still in early stages of development.  

@@ -1,0 +1,3 @@
+{"name":"default","colors":{"c-bg":"#1f2c35","c-text":"#c4dfcf","c-container":"#1e2430","c-list-item":"#17202b","c-list-shadow":"#232e3b","c-primary":"#10A010","c-text-highlight":"#e7ab38","c-code-bg":"#112334","c-back-link":"#ffeeff"}}
+{"name":"oceanic","colors":{"c-bg":"#429dd1","c-text":"#c9d2d4","c-container":"#2e637a","c-list-item":"#22627c","c-list-shadow":"#0f2f41","c-primary":"#ecda37","c-text-highlight":"#eee6cf","c-code-bg":"#1a3d4e","c-back-link":"#f1c9ef"}}
+{"name":"burnt-umber","colors":{"c-bg":"#8a3324","c-text":"#1a1f1c","c-container":"#a2625a","c-list-item":"#7a5142","c-list-shadow":"#54362b","c-primary":"#10A010","c-text-highlight":"#3849e7","c-code-bg":"#112334","c-back-link":"#ffeeff"}}
