@@ -2,7 +2,9 @@ const COLOR_INPUT_PREFIX = 'c-';
 const COLOR_STORAGE_PREFIX = '--color-';
 const ACTIVE_PRESET_STORAGE_KEY = 'snippies-active-theme-preset';
 const PRESETS_URL = '/static/theme-presets.jsonl';
+const SAVE_PRESET_URL = '/api/theme-presets';
 const COLOR_VALUE_PATTERN = /^#[0-9a-f]{6}$/i;
+const PRESET_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 const themePresets = new Map();
 
@@ -36,6 +38,11 @@ function getCurrentThemeColors() {
 
 function createThemePresetLine(name) {
     return JSON.stringify({ name, colors: getCurrentThemeColors() });
+}
+
+function setSaveStatus(message) {
+    const status = document.getElementById('preset-save-status');
+    status.textContent = message;
 }
 
 function setActivePreset(presetName) {
@@ -123,6 +130,25 @@ function renderPresetSwatches(presets) {
     setActivePreset(localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY));
 }
 
+function upsertPresetSwatch(preset) {
+    const swatches = document.getElementById('preset-swatches');
+    let button = [...swatches.querySelectorAll('.preset-swatch')]
+        .find(swatch => swatch.dataset.preset === preset.name);
+
+    themePresets.set(preset.name, preset);
+
+    if (!button) {
+        button = document.createElement('button');
+        button.className = 'preset-swatch';
+        button.dataset.preset = preset.name;
+        button.type = 'button';
+        swatches.appendChild(button);
+    }
+
+    button.title = preset.name;
+    button.style.backgroundColor = preset.swatch;
+}
+
 async function loadPresetSwatches() {
     const response = await fetch(PRESETS_URL);
 
@@ -131,6 +157,56 @@ async function loadPresetSwatches() {
     }
 
     renderPresetSwatches(parsePresetLines(await response.text()));
+}
+
+async function saveCurrentPreset() {
+    const nameInput = document.getElementById('preset-name');
+    const saveButton = document.getElementById('save-preset');
+    const name = nameInput.value.trim();
+
+    if (!name) {
+        setSaveStatus('Enter a preset name.');
+        return;
+    }
+
+    if (!PRESET_NAME_PATTERN.test(name)) {
+        setSaveStatus('Use letters, numbers, hyphens, or underscores.');
+        return;
+    }
+
+    const rawPreset = { name, colors: getCurrentThemeColors() };
+    const preset = normalizePreset(rawPreset);
+
+    if (!preset) {
+        setSaveStatus('Current colors are not valid.');
+        return;
+    }
+
+    saveButton.disabled = true;
+    setSaveStatus('Saving...');
+
+    try {
+        const response = await fetch(SAVE_PRESET_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(rawPreset),
+        });
+
+        if (!response.ok) {
+            setSaveStatus(await response.text() || 'Could not save preset.');
+            return;
+        }
+
+        upsertPresetSwatch(preset);
+        setActivePreset(preset.name);
+        nameInput.value = '';
+        setSaveStatus('Preset saved.');
+    } catch {
+        setSaveStatus('Could not save preset.');
+    } finally {
+        saveButton.disabled = false;
+    }
 }
 
 function restoreSavedColors() {
@@ -165,6 +241,14 @@ document.getElementById('preset-swatches').addEventListener('click', e => {
     }
 
     applyPreset(button.dataset.preset);
+});
+
+document.getElementById('save-preset').addEventListener('click', saveCurrentPreset);
+document.getElementById('preset-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        saveCurrentPreset();
+    }
 });
 
 restoreSavedColors();

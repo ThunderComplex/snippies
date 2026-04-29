@@ -212,6 +212,33 @@ img {
     margin-bottom: 15px;
 }
 
+.preset-save-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.preset-save-row input {
+    min-width: 0;
+    flex: 1;
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    color: var(--color-text);
+    background-color: var(--color-container);
+}
+
+.preset-save-row button {
+    padding: 0 14px;
+}
+
+.preset-save-status {
+    min-height: 16px;
+    margin-bottom: 8px;
+    color: white;
+    font-size: 0.8rem;
+}
+
 button {
     border: none;
     border-radius: 10px;

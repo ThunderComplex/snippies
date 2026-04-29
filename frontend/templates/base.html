@@ -29,6 +29,11 @@
             <div class="preset-selector picker-row">
                 <div id="preset-swatches" class="swatch-group"></div>
             </div>
+            <div class="preset-save-row">
+                <input type="text" id="preset-name" placeholder="Preset name" maxlength="64">
+                <button id="save-preset">Save</button>
+            </div>
+            <div id="preset-save-status" class="preset-save-status" aria-live="polite"></div>
             <div class="picker-row">
                 <label>Background</label>
                 <div class="color-input"><input type="color" id="c-bg" value="#1f2c35"></div>

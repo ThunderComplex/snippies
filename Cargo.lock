@@ -1473,6 +1473,7 @@ dependencies = [
  "markdown",
  "notify",
  "serde",
+ "serde_json",
  "tera",
  "tokio",
  "tower",

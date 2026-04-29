@@ -1,5 +1,5 @@
 use axum::{
-    Form, Router,
+    Form, Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
@@ -11,6 +11,7 @@ use dotenvy::dotenv;
 use notify::{Config, EventKind, RecommendedWatcher, Watcher};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeMap,
     error::Error,
     fs::OpenOptions,
     io::{Error as IOError, Write as IOWrite},
@@ -26,6 +27,12 @@ use tracing::{info, warn};
 struct Snippie {
     title: String,
     contents: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct ThemePreset {
+    name: String,
+    colors: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug)]
@@ -51,6 +58,66 @@ impl Args {
         let output_dir = self.out_dir.clone().unwrap_or(String::from("./output"));
         PathBuf::from(output_dir)
     }
+}
+
+fn is_valid_color_value(value: &str) -> bool {
+    value.len() == 7
+        && value.starts_with('#')
+        && value.chars().skip(1).all(|c| c.is_ascii_hexdigit())
+}
+
+fn is_valid_preset_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+fn validate_theme_preset(preset: &ThemePreset) -> Result<(), &'static str> {
+    const COLOR_IDS: [&str; 9] = [
+        "c-bg",
+        "c-text",
+        "c-container",
+        "c-list-item",
+        "c-list-shadow",
+        "c-primary",
+        "c-text-highlight",
+        "c-code-bg",
+        "c-back-link",
+    ];
+
+    if !is_valid_preset_name(&preset.name) {
+        return Err("Preset names can only contain letters, numbers, hyphens, and underscores.");
+    }
+
+    if preset.colors.len() != COLOR_IDS.len() {
+        return Err("Preset must include every theme color.");
+    }
+
+    for color_id in COLOR_IDS {
+        let Some(color) = preset.colors.get(color_id) else {
+            return Err("Preset must include every theme color.");
+        };
+
+        if !is_valid_color_value(color) {
+            return Err("Preset colors must be hex values like #1f2c35.");
+        }
+    }
+
+    Ok(())
+}
+
+fn append_theme_preset(preset: &ThemePreset) -> Result<(), IOError> {
+    let line = serde_json::to_string(preset)
+        .map_err(|error| IOError::new(std::io::ErrorKind::InvalidInput, error))?;
+    let mut preset_file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open("frontend/static/theme-presets.jsonl")?;
+
+    writeln!(preset_file, "{}", line)?;
+    Ok(())
 }
 
 fn write_snippies(args: &Args, snippies: &Vec<Snippie>) -> Result<(), IOError> {
@@ -293,6 +360,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ServeFile::new(output_dir.join("static").join("favicon.ico")),
         )
         .route("/api/new", post(new_snippie_route))
+        .route("/api/theme-presets", post(theme_preset_route))
         .route_service("/new", ServeFile::new(output_dir.join("new.html")))
         .nest_service("/snippie", ServeDir::new(output_dir.join("snippies")))
         .nest_service("/static", ServeDir::new(output_dir.join("static")))
@@ -349,4 +417,30 @@ async fn new_snippie_route(
             Ok(Redirect::to("/error"))
         }
     }
+}
+
+#[axum::debug_handler]
+async fn theme_preset_route(
+    State((_state, auth)): State<(Args, Option<NewSnippieAuth>)>,
+    headers: HeaderMap,
+    Json(data): Json<ThemePreset>,
+) -> Result<StatusCode, Response> {
+    if let Some(auth) = auth {
+        if !auth.is_authorized(&headers) {
+            return Err(NewSnippieAuth::unauthorized_response());
+        }
+    }
+
+    if let Err(validation_error) = validate_theme_preset(&data) {
+        return Err((StatusCode::BAD_REQUEST, validation_error).into_response());
+    }
+
+    info!("Saving theme preset: {:?}", &data.name);
+
+    if let Err(write_error) = append_theme_preset(&data) {
+        warn!("Could not write theme preset. Reason: {}", write_error);
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Could not save preset.").into_response());
+    }
+
+    Ok(StatusCode::CREATED)
 }
