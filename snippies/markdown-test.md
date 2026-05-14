@@ -24,5 +24,5 @@ And if I may quote
 ---  
 
 [And a link of course](https://github.com/ThunderComplex/snippies)
-![A image](https://cdn.fosstodon.org/media_attachments/files/116/377/728/432/366/642/original/4788e091860d27b4.png)
+![A image](https://cdn.fosstodon.org/accounts/avatars/116/307/544/821/645/285/original/a7505433057b3ec2.jpg)
 End!

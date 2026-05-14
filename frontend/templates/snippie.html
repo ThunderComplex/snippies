@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% block head %}
-{{ super() }}
+{{ block.Super }}
 <link rel="stylesheet" href="/static/prism.css" />
 {% endblock head %}
 
 {% block content %}
 <a id="backlink" href="/">back</a>
+{% autoescape off %}
 {{ content }}
+{% endautoescape %}
 {% endblock content %}
 
 {% block footer %}
-{{ super() }}
+{{ block.Super }}
 
 <script src="/static/prism.js" async></script>
 {% endblock footer %}
