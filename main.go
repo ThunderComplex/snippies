@@ -290,13 +290,8 @@ func apiNewHandler(w http.ResponseWriter, req *http.Request) {
 func fileHandler(file string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		path := filepath.Join(args.outDir, file)
-		content, err := os.ReadFile(path)
 
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		w.Write(content)
+		http.ServeFile(w, req, path)
 	}
 }
 
