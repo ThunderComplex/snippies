@@ -14,13 +14,15 @@ Under the hood snippies uses prism.js for syntax highlighting.
 ## Usage  
 
 ```
-snippies [OPTIONS] --snippie-dir <SNIPPIE_DIR>
+go run . [OPTIONS]
 
 Options:
-  -s, --snippie-dir <SNIPPIE_DIR>  Directory where snippie .md files reside
-  -o, --out-dir <OUT_DIR>          Output directory, ready to serve
-  -p <PORT>                        Port to listen on [default: 8192]
-  -h, --help                       Print help
+  -out-dir string
+        Output directory, ready to serve (default "output")
+  -port int
+        Port to listen on (default 8192)
+  -snippie-dir string
+        Directory where snippie .md files reside (default "snippies")
 ```
 
 Create a local `.env` file in the project root to enable HTTP Basic Auth for
@@ -43,11 +45,6 @@ Theme presets are loaded from `frontend/static/theme-presets.jsonl`. One preset 
 ```
 
 Note that you can optionally define a `swatch` property, but by default the preset swatch will adapt the color of `c-bg`.
-
-## Docker
-
-`docker build -f docker/Dockerfile -t thundercomplex/snippies .`  
-`docker run -p8192:8192 -v./snippies:/application/snippies thundercomplex/snippies`
 
 ## Development notice  
 
