@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -48,7 +49,7 @@ func main() {
 	err := godotenv.Load()
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var snippieDir, outDir string
@@ -59,9 +60,9 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Println("snippie dir: ", snippieDir)
-	fmt.Println("output dir: ", outDir)
-	fmt.Println("port: ", *port)
+	log.Println("snippie dir: ", snippieDir)
+	log.Println("output dir: ", outDir)
+	log.Println("port: ", *port)
 
 	args = Args{
 		snippieDir: snippieDir,
@@ -72,7 +73,7 @@ func main() {
 	watcher, err := fsnotify.NewWatcher()
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	defer watcher.Close()
@@ -80,19 +81,19 @@ func main() {
 	err = watcher.Add(args.snippieDir)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	err = watcher.Add("frontend/templates")
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	err = watcher.Add("frontend/static")
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	go func() {
@@ -108,7 +109,7 @@ func main() {
 
 				if shouldUpdate && event.Has(fsnotify.Write) {
 					shouldUpdate = false
-					fmt.Println("rendering snippies")
+					log.Println("rendering snippies")
 					renderSnippies()
 
 				}
@@ -117,7 +118,7 @@ func main() {
 					return
 				}
 
-				fmt.Println("watcher err", err)
+				log.Println("watcher error: ", err)
 			case _ = <-updateDebouncer.C:
 				shouldUpdate = true
 			}
@@ -188,19 +189,19 @@ func validatePreset(preset *ThemePreset) bool {
 		presetColor, ok := preset.Colors[colorId]
 
 		if !ok {
-			fmt.Println("invalid color", colorId)
+			log.Println("invalid color: ", colorId)
 			missingColors = append(missingColors, colorId)
 			continue
 		}
 
 		if !themePresetColorRegex.MatchString(presetColor) {
-			fmt.Println("invalid color", presetColor)
+			log.Println("invalid color: ", presetColor)
 			return false
 		}
 	}
 
 	if len(missingColors) > 0 {
-		fmt.Println("missing colors", missingColors)
+		log.Println("missing colors: ", missingColors)
 		return false
 	}
 
@@ -215,7 +216,7 @@ func apiThemePresetHandler(w http.ResponseWriter, req *http.Request) {
 		err := json.NewDecoder(req.Body).Decode(&preset)
 
 		if err != nil {
-			fmt.Println(err)
+			log.Println("preset decoding error: ", err)
 
 			redirectTo("/error", w)
 			return
@@ -271,7 +272,7 @@ func apiNewHandler(w http.ResponseWriter, req *http.Request) {
 			err := os.WriteFile(path, []byte(contents), 0644)
 
 			if err != nil {
-				fmt.Println(err)
+				log.Println("could not create new snippie: ", err)
 
 				redirectTo("/error", w)
 				return
@@ -292,7 +293,7 @@ func fileHandler(file string) func(http.ResponseWriter, *http.Request) {
 		content, err := os.ReadFile(path)
 
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 		w.Write(content)
@@ -303,7 +304,7 @@ func fileFromRequestHandler(w http.ResponseWriter, req *http.Request) {
 	requestUri, err := url.PathUnescape(req.RequestURI)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	acceptHeader := req.Header["Accept"][0]
@@ -311,7 +312,7 @@ func fileFromRequestHandler(w http.ResponseWriter, req *http.Request) {
 	content, err := os.ReadFile(filePath)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	if strings.HasSuffix(filePath, ".js") {
@@ -329,7 +330,7 @@ func renderSnippies() {
 	workDir, err := os.Getwd()
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	snippiePath := filepath.Join(workDir, args.snippieDir)
@@ -340,25 +341,25 @@ func renderSnippies() {
 	snippieEntries, err := os.ReadDir(snippiePath)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	err = os.RemoveAll(outPath)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	err = os.MkdirAll(outSnippiesPath, 0755)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	err = os.MkdirAll(outStaticPath, 0755)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var snippieNames []string
@@ -373,7 +374,7 @@ func renderSnippies() {
 		snippieContents, snippieErr := os.ReadFile(snippieFilePath)
 
 		if snippieErr != nil {
-			panic(snippieErr)
+			log.Fatal(snippieErr)
 		}
 
 		snippieHtml := markdownToHtml(snippieContents)
@@ -387,7 +388,7 @@ func renderSnippies() {
 		writeErr := os.WriteFile(outFilePath, []byte(snippieRendered), 0644)
 
 		if writeErr != nil {
-			panic(writeErr)
+			log.Fatal(writeErr)
 		}
 
 		snippieNames = append(snippieNames, strings.TrimSuffix(snippieEntry.Name(), snippieExt))
@@ -398,18 +399,25 @@ func renderSnippies() {
 }
 
 func copyStaticFiles(path string) {
-	copyFile("frontend/static/app.css", filepath.Join(path, "app.css"))
-	copyFile("frontend/static/theme.js", filepath.Join(path, "theme.js"))
-	copyFile(
-		"frontend/static/theme-presets.jsonl",
-		filepath.Join(path, "theme-presets.jsonl"),
-	)
-	copyFile("frontend/static/prism.css", filepath.Join(path, "prism.css"))
-	copyFile("frontend/static/prism.js", filepath.Join(path, "prism.js"))
-	copyFile(
-		"frontend/static/favicon.ico",
-		filepath.Join(path, "favicon.ico"),
-	)
+	files := []struct {
+		src string
+		dst string
+	}{
+		{"frontend/static/app.css", filepath.Join(path, "app.css")},
+		{"frontend/static/theme.js", filepath.Join(path, "theme.js")},
+		{"frontend/static/theme-presets.jsonl", filepath.Join(path, "theme-presets.jsonl")},
+		{"frontend/static/prism.css", filepath.Join(path, "prism.css")},
+		{"frontend/static/prism.js", filepath.Join(path, "prism.js")},
+		{"frontend/static/favicon.ico", filepath.Join(path, "favicon.ico")},
+	}
+
+	for _, item := range files {
+		err := copyFile(item.src, item.dst)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func createStaticTemplates(snippieNames []string, outPath string) {
@@ -423,10 +431,7 @@ func createStaticTemplates(snippieNames []string, outPath string) {
 	newContent, newErr := newTemplate.Execute(ctx)
 
 	if indexErr != nil || errorErr != nil || newErr != nil {
-		fmt.Println(indexErr)
-		fmt.Println(errorErr)
-		fmt.Println(newErr)
-		panic("Could not create static templates")
+		log.Fatal(indexErr, errorErr, newErr)
 	}
 
 	writeErr1 := os.WriteFile(filepath.Join(outPath, "index.html"), []byte(indexContent), 0644)
@@ -434,7 +439,7 @@ func createStaticTemplates(snippieNames []string, outPath string) {
 	writeErr3 := os.WriteFile(filepath.Join(outPath, "error.html"), []byte(errorContent), 0644)
 
 	if writeErr1 != nil || writeErr2 != nil || writeErr3 != nil {
-		panic("Could not write static templates")
+		log.Fatal(writeErr1, writeErr2, writeErr3)
 	}
 }
 
@@ -447,7 +452,7 @@ func renderSnippieTemplate(template []byte) string {
 	result, err := snippieTemplate.Execute(ctx)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return result
